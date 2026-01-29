@@ -1,7 +1,8 @@
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from .routers import auth, pages, system
+
+from .routers import auth, pages, system,hadbit
 
 
 app = FastAPI()
@@ -14,3 +15,4 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 app.include_router(auth.router)
 app.include_router(pages.router)
 app.include_router(system.router)
+app.include_router(hadbit.router)

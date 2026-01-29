@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>詳細・編集画面 - Hadbit</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        padding: 20px;
+      }
+      .nav {
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="nav">
+      <a href="/hadbit/records">← 登録画面へ戻る</a>
+    </div>
+    <h1>詳細・編集画面</h1>
+    <p>ログインユーザー: {{ user.email }}</p>
+    <p>記録ID: <strong>{{ id }}</strong> の詳細編集を行います。</p>
+    <p>日時の修正や、誤って登録した記録の削除機能を提供します。</p>
+  </body>
+</html>
