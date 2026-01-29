@@ -1,7 +1,9 @@
 
-# PFXDGRSbase
+# hadbit-fastapi
+
 
 Python + FastAPI + htmx + Docker + Render + Supabase を組み合わせた、開発効率とモダンなユーザー体験を両立させるためのフルスタック・テンプレートです。
+
 
 ## 🚀 プロジェクト概要
 
@@ -11,6 +13,8 @@ PFXDRS Templateは、ReactやVueなどの重厚なSPAフレームワークを使
 ---
 
 ## 🛠 技術スタックと選定理由
+
+base:PFXDGRSbase
 
 |技術要素|役割・選定理由|
 |-|-|
