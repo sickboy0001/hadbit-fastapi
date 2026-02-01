@@ -1,4 +1,27 @@
 <div class="w-full bg-base-100 p-4 rounded-lg border border-base-200">
+  <div class="flex mb-4">
+    <div class="join">
+      <button
+        class="join-item btn btn-sm btn-active btn-primary"
+        onclick="filterGrid(this, '')"
+      >
+        全て
+      </button>
+      {% set unique_parents = [] %} {% set seen_ids = [] %} {% for log in logs
+      %} {% if log.parent_item_id and log.parent_item_id not in seen_ids %} {%
+      set _ = seen_ids.append(log.parent_item_id) %} {% set _ =
+      unique_parents.append({'id': log.parent_item_id, 'name':
+      log.parent_short_name}) %} {% endif %} {% endfor %} {% for parent in
+      unique_parents %}
+      <button
+        class="join-item btn btn-sm"
+        onclick="filterGrid(this, '{{ parent.id }}')"
+      >
+        {{ parent.name }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
   <div id="grid"></div>
 </div>
 
@@ -27,14 +50,22 @@
           id: {{ log.log_id }},
           date: "{{ log.done_at.strftime('%Y-%m-%d') }}",
           child_name: "{{ log.child_name }}",
-          parent_name: "{{ log.parent_name }}"
+          parent_name: "{{ log.parent_name }}",
+          parentId: "{{ log.parent_item_id }}"
         },
         {% endfor %}
       ];
 
-      // 1. 列定義（日付）を作成
-      // 重複を除いた日付リストを取得し、昇順（古い順）にソート
-      const dates = [...new Set(rawLogs.map(log => log.date))].sort();
+      let grid = null;
+
+      function renderGrid(filterParentId) {
+        const currentLogs = filterParentId
+          ? rawLogs.filter(log => log.parentId === filterParentId)
+          : rawLogs;
+
+        // 1. 列定義（日付）を作成
+        // 重複を除いた日付リストを取得し、昇順（古い順）にソート
+        const dates = [...new Set(currentLogs.map(log => log.date))].sort();
 
       const columns = [
         { header: '項目', name: 'child_name', sortable: true, width: 200 }
@@ -53,7 +84,7 @@
       // 2. 行データ（習慣項目ごとの集計）を作成
       const dataMap = {};
 
-      rawLogs.forEach(log => {
+        currentLogs.forEach(log => {
         const key = log.parent_name + '-' + log.child_name; // 親項目と習慣名の組み合わせをキーにする
         if (!dataMap[key]) {
           dataMap[key] = { child_name: `[${log.parent_name}]${log.child_name}`, parent_name: log.parent_name };
@@ -70,9 +101,12 @@
 
   // グリッド描画
       const el = document.getElementById('grid');
-      el.innerHTML = '';
+        // 既存のグリッドがあれば破棄
+        if (grid) {
+          grid.destroy();
+        }
 
-      const grid = new tui.Grid({
+        grid = new tui.Grid({
         el: el,
         data: gridData,
         scrollX: true,  // 横スクロールを明示
@@ -105,5 +139,21 @@
           grid.scrollToColumn(lastColumnName);
         }
       }, 200); // 少し余裕を持って200ms
+      }
+
+      // 初期描画
+      renderGrid('');
+
+      // フィルタリング関数をグローバルに定義
+      window.filterGrid = function(btn, parentId) {
+        // ボタンのアクティブ状態切り替え
+        const container = btn.closest('.join');
+        container.querySelectorAll('.btn').forEach(b => {
+          b.classList.remove('btn-active', 'btn-primary');
+        });
+        btn.classList.add('btn-active', 'btn-primary');
+
+        renderGrid(parentId);
+      };
     })();
 </script>

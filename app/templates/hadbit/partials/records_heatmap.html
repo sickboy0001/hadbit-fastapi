@@ -1,7 +1,30 @@
-<div
-  class="w-full overflow-x-auto bg-base-100 p-4 rounded-lg border border-base-200 flex justify-center"
->
-  <div id="cal-heatmap"></div>
+<div class="w-full bg-base-100 p-4 rounded-lg border border-base-200">
+  <div class="flex mb-4">
+    <div class="join">
+      <button
+        class="join-item btn btn-sm btn-active btn-primary"
+        onclick="filterHeatmap(this, '')"
+      >
+        全て
+      </button>
+      {% set unique_parents = [] %} {% set seen_ids = [] %} {% for log in logs
+      %} {% if log.parent_item_id and log.parent_item_id not in seen_ids %} {%
+      set _ = seen_ids.append(log.parent_item_id) %} {% set _ =
+      unique_parents.append({'id': log.parent_item_id, 'name':
+      log.parent_short_name}) %} {% endif %} {% endfor %} {% for parent in
+      unique_parents %}
+      <button
+        class="join-item btn btn-sm"
+        onclick="filterHeatmap(this, '{{ parent.id }}')"
+      >
+        {{ parent.name }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="overflow-x-auto flex justify-center">
+    <div id="cal-heatmap"></div>
+  </div>
 </div>
 
 <!-- Cal-Heatmap v4 & Dependencies -->
@@ -20,64 +43,91 @@
     // ログデータをJavaScriptオブジェクト配列に変換
     const rawData = [
       {% for log in logs %}
-      { date: "{{ log.done_at.isoformat() }}", value: 1 },
+      { date: "{{ log.done_at.isoformat() }}", value: 1, parentId: "{{ log.parent_item_id }}" },
       {% endfor %}
     ];
 
-    // 日付ごとに件数を集計 (YYYY-MM-DD単位)
-    const dataMap = {};
-    rawData.forEach(item => {
-      const day = item.date.substring(0, 10);
-      dataMap[day] = (dataMap[day] || 0) + item.value;
-    });
-
-    const sourceData = Object.keys(dataMap).map(key => ({
-      date: key,
-      value: dataMap[key]
-    }));
+    // 集計関数
+    function aggregateData(filterParentId) {
+      const dataMap = {};
+      rawData.forEach(item => {
+        if (!filterParentId || item.parentId === filterParentId) {
+          const day = item.date.substring(0, 10);
+          dataMap[day] = (dataMap[day] || 0) + item.value;
+        }
+      });
+      return Object.keys(dataMap).map(key => ({
+        date: key,
+        value: dataMap[key]
+      }));
+    }
 
     // 表示期間の設定（現在から過去12ヶ月）
     const now = new Date();
     const startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
 
     // Cal-Heatmapの描画
-    const cal = new CalHeatmap();
-    cal.paint({
-      itemSelector: '#cal-heatmap',
-      range: 12,
-      domain: {
-        type: 'month',
-        gutter: 10,
-        label: { text: 'YYYY/MM', position: 'top' },
-      },
-      subDomain: {
-        type: 'day',
-        radius: 2,
-        width: 12,
-        height: 12,
-        gutter: 2
-      },
-      date: { start: startDate },
-      data: {
-        source: sourceData,
-        x: 'date',
-        y: 'value'
-      },
-      scale: {
-        color: {
-          type: 'threshold',
-          range: ['#f3f4f6', '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d'],
-          domain: [1, 2, 3, 5, 7, 10]
+    let cal;
+    function renderHeatmap(parentId) {
+      const sourceData = aggregateData(parentId);
+
+      // 既存の描画をクリア
+      document.getElementById('cal-heatmap').innerHTML = '';
+
+      cal = new CalHeatmap();
+      cal.paint({
+        itemSelector: '#cal-heatmap',
+        range: 12,
+        domain: {
+          type: 'month',
+          gutter: 10,
+          label: { text: 'YYYY/MM', position: 'top' },
         },
-      },
-      theme: 'light',
-    }, [
-      [
-        Tooltip,
-        {
-          text: (date, value, dayjsDate) => (value ? value : 0) + ' 件 (' + dayjsDate.format('YYYY-MM-DD') + ')',
+        subDomain: {
+          type: 'day',
+          radius: 2,
+          width: 12,
+          height: 12,
+          gutter: 2
         },
-      ],
-    ]);
+        date: { start: startDate },
+        data: {
+          source: sourceData,
+          x: 'date',
+          y: 'value'
+        },
+        scale: {
+          color: {
+            type: 'threshold',
+            range: ['#f3f4f6', '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d'],
+            domain: [1, 2, 3, 5, 7, 10]
+          },
+        },
+        theme: 'light',
+      }, [
+        [
+          Tooltip,
+          {
+            text: (date, value, dayjsDate) => (value ? value : 0) + ' 件 (' + dayjsDate.format('YYYY-MM-DD') + ')',
+          },
+        ],
+      ]);
+    }
+
+    // 初期描画
+    renderHeatmap('');
+
+    // フィルタリング関数をグローバルに定義
+    window.filterHeatmap = function(btn, parentId) {
+      // ボタンのアクティブ状態切り替え
+      const container = btn.closest('.join');
+      container.querySelectorAll('.btn').forEach(b => {
+        b.classList.remove('btn-active', 'btn-primary');
+      });
+      btn.classList.add('btn-active', 'btn-primary');
+
+      // 再描画
+      renderHeatmap(parentId);
+    };
   })();
 </script>

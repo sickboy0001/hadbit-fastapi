@@ -1,8 +1,29 @@
+{% from "hadbit/partials/popmenu_macros.html" import render_log_row %}
 {% if not oob and not update %}
+<div id="records-container">
+  <div class="flex mb-4">
+    <div class="join">
+      <button class="join-item btn btn-sm btn-active btn-primary"
+              onclick="filterLogs(this, '')">
+        全て
+      </button>
+      {% set unique_parents = [] %}
+      {% set seen_ids = [] %}
+      {% for log in logs %}
+        {% if log.parent_item_id and log.parent_item_id not in seen_ids %}
+          {% set _ = seen_ids.append(log.parent_item_id) %}
+          {% set _ = unique_parents.append({'id': log.parent_item_id, 'name': log.parent_short_name}) %}
+        {% endif %}
+      {% endfor %}
+      {% for parent in unique_parents %}
+      <button class="join-item btn btn-sm"
+              onclick="filterLogs(this, '{{ parent.id }}')">
+        {{ parent.name }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
 <div id="records-list" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start" {% if swap_all %}hx-swap-oob="true"{% endif %}>
-{% endif %}
-
-{% if not oob and not update %}
   {% set ns = namespace(current_date=None) %}
   {% for log in logs %}
     {% set log_date = log.done_at.strftime('%Y-%m-%d') %}
@@ -10,39 +31,47 @@
       {% if ns.current_date is not none %}
         </div></div></div>
       {% endif %}
-      <div class="card bg-base-100 shadow-sm border border-base-200">
+      <div class="card bg-base-100 shadow-sm border border-base-200 overflow-visible">
         <div class="card-body p-4">
           <h3 class="card-title text-lg border-b border-base-200 mb-2 pb-2">{{ log_date }}</h3>
           <div class="flex flex-col">
       {% set ns.current_date = log_date %}
     {% endif %}
     
-    <div id="log-{{ log.log_id }}" class="record-row flex items-center gap-2 py-2 border-b border-base-100 last:border-none">
-      <span class="text-sm text-gray-500">{{ log.done_at.strftime('%H:%M') }}</span>
-      <span class="font-semibold">[{{ log.parent_short_name }}] {{ log.child_short_name }}</span>
-      <div class="flex gap-2">
-        <button class="btn btn-outline btn-info btn-sm" hx-get="/hadbit/records/{{ log.log_id }}/edit" hx-target="#modal-container" hx-swap="innerHTML">編集</button>
-        <button class="btn btn-outline btn-error btn-sm" hx-delete="/api/logs/delete/{{ log.log_id }}" hx-target="closest .record-row" hx-swap="outerHTML">削除</button>
-      </div>
-    </div>
+    {{ render_log_row(log, update=False) }}
 
     {% if loop.last %}
       </div></div></div>
     {% endif %}
   {% endfor %}
+</div>
+</div>
 {% else %}
   {% for log in logs %}
-    <div id="log-{{ log.log_id }}" class="record-row flex items-center gap-2 py-2 border-b border-base-100 last:border-none"{% if update %}hx-swap-oob="outerHTML:#log-{{ log.log_id }}"{% endif %}>
-      <span class="text-sm text-gray-500">{{ log.done_at.strftime('%H:%M') }}</span>
-      <span class="font-semibold">[{{ log.parent_short_name }}] {{ log.child_short_name }}</span>
-      <div class="flex gap-2">
-        <button class="btn btn-outline btn-info btn-sm" hx-get="/hadbit/records/{{ log.log_id }}/edit" hx-target="#modal-container" hx-swap="innerHTML">編集</button>
-        <button class="btn btn-outline btn-error btn-sm" hx-delete="/api/logs/delete/{{ log.log_id }}" hx-target="closest .record-row" hx-swap="outerHTML">削除</button>
-      </div>
-    </div>
+    {{ render_log_row(log, update=update) }}
   {% endfor %}
 {% endif %}
 
-{% if not oob and not update %}
-</div>
-{% endif %}
+<script>
+  function filterLogs(btn, parentId) {
+    // ボタンのアクティブ状態切り替え
+    const container = btn.closest('.join');
+    container.querySelectorAll('.btn').forEach(b => {
+      b.classList.remove('btn-active', 'btn-primary');
+    });
+    btn.classList.add('btn-active', 'btn-primary');
+
+    // ログ行の表示切り替え
+    const rows = document.querySelectorAll('.record-row');
+    rows.forEach(row => {
+      const shouldShow = !parentId || row.dataset.parentId === parentId;
+      row.classList.toggle('hidden', !shouldShow);
+    });
+
+    // 日付カードの表示制御（表示されているログ行がないカードは隠す）
+    document.querySelectorAll('#records-list .card').forEach(card => {
+      const hasVisibleRows = card.querySelectorAll('.record-row:not(.hidden)').length > 0;
+      card.classList.toggle('hidden', !hasVisibleRows);
+    });
+  }
+</script>

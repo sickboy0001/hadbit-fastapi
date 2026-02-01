@@ -1,0 +1,69 @@
+{% macro render_log_row(log, update=False) %}
+<div
+  id="log-{{ log.log_id }}"
+  class="record-row flex items-center gap-2 py-2 border-b border-base-100 last:border-none"
+  data-parent-id="{{ log.parent_item_id }}"
+  {%
+  if
+  update
+  %}hx-swap-oob="outerHTML:#log-{{ log.log_id }}"
+  {%
+  endif
+  %}
+>
+  <span class="text-sm text-gray-500">{{ log.done_at.strftime('%H:%M') }}</span>
+  <div class="dropdown dropdown-bottom">
+    <div
+      tabindex="0"
+      role="button"
+      class="font-semibold cursor-pointer hover:text-primary hover:underline decoration-dashed underline-offset-4 whitespace-nowrap"
+    >
+      [{{ log.parent_short_name }}] {{ log.child_short_name }}
+    </div>
+    <ul
+      tabindex="0"
+      class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-auto border border-base-200"
+    >
+      <li class="border-b border-base-200 mb-1 pb-1">
+        <div
+          class="flex flex-col gap-0 px-2 py-1 cursor-default hover:bg-transparent"
+        >
+          <span class="whitespace-nowrap font-semibold text-sm"
+            >[{{ log.parent_short_name }}] {{ log.child_short_name }}</span
+          >
+          {% if log.comment %}
+          <span class="whitespace-nowrap text-xs font-normal text-gray-500"
+            >{{ log.comment }}</span
+          >
+          {% endif %}
+        </div>
+      </li>
+      <li>
+        <a
+          hx-get="/hadbit/records/{{ log.log_id }}/edit"
+          hx-target="#modal-container"
+          hx-swap="innerHTML"
+          onclick="document.activeElement.blur()"
+          >編集</a
+        >
+      </li>
+      <li>
+        <a
+          class="text-error"
+          hx-delete="/api/logs/delete/{{ log.log_id }}"
+          hx-target="closest .record-row"
+          hx-swap="outerHTML"
+          >削除</a
+        >
+      </li>
+    </ul>
+  </div>
+  {% if log.comment %}
+  <span
+    class="text-xs text-gray-500 truncate flex-1 min-w-0"
+    title="{{ log.comment }}"
+    >{{ log.comment }}</span
+  >
+  {% endif %}
+</div>
+{% endmacro %}

@@ -140,8 +140,7 @@ docker run --rm -p 8000:10000 --env-file .env --name my-test-container testlogin
 --rm: 停止時にコンテナを自動削除します（検証用に便利）。
 -p 8000:10000: ホストのポート 8000 をコンテナの 10000 に転送します。
 --env-file .env: .env ファイルがある場合、環境変数を読み込みます（docker-compose では自動ですが、docker run では指定が必要です）。 .env については xxxURL="xxxx" はNG　xxxURL=xxxx　はOK　ダブルコーテーションは省くこと。 
-検証 ブラウザで http://localhost:8000 にアクセスして動作を確認します。 停止するにはターミナルで Ctrl + C を押します。
-
+検証 ブラウザで http://localhost:8000/docs にアクセスして動作を確認します。 停止するにはターミナルで Ctrl + C を押します。
 
 ## 要件
 ### 非機能要件
@@ -449,6 +448,8 @@ END $$;
 
 ```
 # 履歴
+- 2026/2/2
+  - 歴の画面見やすくしてみた。
 - 2026/2/1 
   - renderへデプロイ
 - 2026/1/24 

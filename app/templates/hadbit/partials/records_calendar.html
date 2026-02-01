@@ -1,4 +1,27 @@
 <div class="w-full bg-base-100 p-2 rounded-lg border border-base-200">
+  <div class="flex mb-4">
+    <div class="join">
+      <button
+        class="join-item btn btn-sm btn-active btn-primary"
+        onclick="filterCalendarEvents(this, '')"
+      >
+        全て
+      </button>
+      {% set unique_parents = [] %} {% set seen_ids = [] %} {% for log in logs
+      %} {% if log.parent_item_id and log.parent_item_id not in seen_ids %} {%
+      set _ = seen_ids.append(log.parent_item_id) %} {% set _ =
+      unique_parents.append({'id': log.parent_item_id, 'name':
+      log.parent_short_name}) %} {% endif %} {% endfor %} {% for parent in
+      unique_parents %}
+      <button
+        class="join-item btn btn-sm"
+        onclick="filterCalendarEvents(this, '{{ parent.id }}')"
+      >
+        {{ parent.name }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
   <div id="calendar"></div>
 </div>
 
@@ -42,7 +65,10 @@
           allDay: false,
           backgroundColor: 'oklch(var(--p))',
           borderColor: 'oklch(var(--p))',
-          textColor: 'oklch(var(--pc))'
+          textColor: 'oklch(var(--pc))',
+          extendedProps: {
+            parentId: '{{ log.parent_item_id }}'
+          }
         },
         {% endfor %}
       ],
@@ -52,6 +78,25 @@
         meridiem: false
       }
     });
+
+    // フィルタリング関数をグローバルに定義
+    window.filterCalendarEvents = function(btn, parentId) {
+      // ボタンのアクティブ状態切り替え
+      const container = btn.closest('.join');
+      container.querySelectorAll('.btn').forEach(b => {
+        b.classList.remove('btn-active', 'btn-primary');
+      });
+      btn.classList.add('btn-active', 'btn-primary');
+
+      // イベントの表示切り替え
+      calendar.getEvents().forEach(event => {
+        if (!parentId || event.extendedProps.parentId == parentId) {
+          event.setProp('display', 'auto');
+        } else {
+          event.setProp('display', 'none');
+        }
+      });
+    };
 
     // タブ切り替え時の表示崩れ防止（コンテナが表示されたタイミングで再描画）
     const observer = new ResizeObserver(entries => {
