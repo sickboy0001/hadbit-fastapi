@@ -1,0 +1,61 @@
+<dialog id="edit_modal_{{ log.log_id }}" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg">記録の編集</h3>
+    <div class="py-4">
+      <form
+        hx-put="/api/records/regist/{{ log.log_id }}"
+        hx-swap="none"
+        hx-on::after-request="if(event.detail.successful) this.closest('dialog').close()"
+      >
+        <div class="form-control w-full">
+          <label class="label">
+            <span class="label-text">項目</span>
+          </label>
+          <input
+            type="text"
+            value="{{ log.child_name }}"
+            class="input input-bordered w-full"
+            disabled
+          />
+          <label class="label">
+            <span class="label-text-alt">{{ log.parent_name }}</span>
+          </label>
+        </div>
+
+        <div class="form-control w-full mt-2">
+          <label class="label">
+            <span class="label-text">日時</span>
+          </label>
+          <input
+            type="datetime-local"
+            name="record_date"
+            value="{{ log.done_at.strftime('%Y-%m-%dT%H:%M') }}"
+            class="input input-bordered w-full"
+          />
+        </div>
+
+        <div class="form-control w-full mt-2">
+          <label class="label">
+            <span class="label-text">メモ</span>
+          </label>
+          <textarea name="memo" class="textarea textarea-bordered h-24">
+{{ log.comment or '' }}</textarea
+          >
+        </div>
+        <div class="modal-action">
+          <button
+            class="btn"
+            type="button"
+            onclick="this.closest('dialog').close()"
+          >
+            閉じる
+          </button>
+          <button class="btn btn-primary" type="submit">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</dialog>
+<script>
+  document.getElementById("edit_modal_{{ log.log_id }}").showModal();
+</script>

@@ -1,0 +1,42 @@
+{% extends "base.html" %} {% block title %}登録画面 - Hadbit{% endblock %} {%
+block content %}
+<h3 class="text-3xl font-bold mb-4">ログ</h3>
+
+{% if habits %}
+<div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+  {% for grouper, items in habits|groupby('parent_sort_order') %}
+  <div class="border border-neutral p-2 rounded-lg h-full">
+    <div class="text-xl font-bold border-b-2 border-base-300 mb-4 pb-2">
+      {{ items[0].parent_name }}
+    </div>
+    <div class="flex flex-wrap gap-1 md:gap-3">
+      {% for habit in items %}
+      <button
+        type="button"
+        class="btn btn-outline min-h-0 h-auto py-0.5 px-1 text-sm md:py-3 md:px-4 md:text-lg"
+        hx-post="/api/records"
+        hx-vals='{"hadbit_item_id": {{ habit.child_id }}}'
+        hx-swap="none"
+      >
+        {{ habit.child_name }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p>現在、登録されている習慣はありません。</p>
+{% endif %}
+
+<div class="mt-8">
+  <h4 class="text-xl font-bold mb-4">記録履歴</h4>
+  {% include "hadbit/partials/records_table.html" %}
+</div>
+
+<!-- モーダル表示用コンテナ -->
+<div id="modal-container"></div>
+
+<!-- トースト通知用のコンテナ -->
+<div id="toast-container" class="toast toast-top toast-end z-50"></div>
+{% endblock %}

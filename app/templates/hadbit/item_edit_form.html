@@ -1,0 +1,66 @@
+<div class="h-full">
+  <h3 class="text-xl font-bold mb-4 border-b pb-2">
+    項目編集: {{ item.name }}
+  </h3>
+
+  <form hx-put="/hadbit/items/{{ item.id }}" hx-target="body">
+    {% if item.parent_id %}
+    <div class="form-control w-full mb-3">
+      <label class="label">
+        <span class="label-text font-bold">種別</span>
+      </label>
+      <select name="parent_id" class="select select-bordered w-full">
+        {% for p in parents %} {# 先に変数に格納しておく #} {% set is_selected =
+        'selected' if p.id == item.parent_id else '' %}
+
+        <option value="{{ p.id }}" {{ is_selected }}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+
+    <div class="form-control w-full mb-3">
+      <label class="label">
+        <span class="label-text font-bold">項目名</span>
+      </label>
+      <input
+        type="text"
+        name="name"
+        value="{{ item.name }}"
+        class="input input-bordered w-full"
+        required
+        onfocus="this.select()"
+      />
+    </div>
+
+    <div class="form-control w-full mb-3">
+      <label class="label">
+        <span class="label-text font-bold">略称（カレンダー表示用）</span>
+      </label>
+      <input
+        type="text"
+        name="short_name"
+        value="{{ item.short_name or '' }}"
+        class="input input-bordered w-full"
+        onfocus="this.select()"
+      />
+    </div>
+
+    <div class="form-control w-full mb-3">
+      <label class="label">
+        <span class="label-text font-bold">説明</span>
+      </label>
+      <textarea
+        name="description"
+        class="textarea textarea-bordered h-24"
+        onfocus="this.select()"
+      >
+{{ item.description or '' }}</textarea
+      >
+    </div>
+
+    <div class="flex justify-end gap-2 mt-6">
+      <button type="submit" class="btn btn-primary">保存</button>
+    </div>
+  </form>
+</div>

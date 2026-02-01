@@ -1,0 +1,23 @@
+<div hx-swap-oob="beforeend:#toast-container">
+  <div
+    id="toast-{{ log_id }}"
+    class="alert alert-success shadow-lg mb-2 flex justify-between items-center"
+  >
+    <span>削除しました。</span>
+    <button
+      class="btn btn-sm btn-ghost underline"
+      hx-post="/api/records/restore"
+      hx-vals="{{ restore_vals }}"
+      hx-swap="none"
+      hx-on::after-request="if(event.detail.successful) window.location.reload()"
+    >
+      元に戻す
+    </button>
+  </div>
+  <script>
+    setTimeout(() => {
+      const el = document.getElementById("toast-{{ log_id }}");
+      if (el) el.remove();
+    }, 5000);
+  </script>
+</div>

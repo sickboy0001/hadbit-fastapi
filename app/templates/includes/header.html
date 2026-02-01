@@ -13,11 +13,20 @@
   <div class="flex-none gap-2">
     {% if user %}
     <div class="dropdown dropdown-end">
-      <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
-        <div
-          class="w-10 rounded-full bg-primary text-primary-content flex items-center justify-center"
-        >
-          <span>{{ (user.name if user.name else user.email)[0] | upper }}</span>
+      <div
+        tabindex="0"
+        role="button"
+        class="btn btn-ghost flex items-center gap-2"
+      >
+        <span class="font-normal">{{ user.email }}</span>
+        <div class="avatar">
+          <div
+            class="w-10 rounded-full bg-primary text-primary-content flex items-center justify-center"
+          >
+            <span class="text-xl"
+              >{{ (user.name if user.name else user.email)[0] | upper }}</span
+            >
+          </div>
         </div>
       </div>
       <ul
@@ -38,7 +47,8 @@
       </ul>
     </div>
     {% else %}
-    <a href="/login" class="btn btn-primary btn-sm">Login</a>
+    <span class="mr-2 text-sm">未ログイン</span>
+    <a href="/login" class="btn btn-primary btn-sm">ログイン</a>
     {% endif %}
   </div>
 </header>

@@ -21,13 +21,15 @@
     - [3. マスタ編集画面 (`/HadbitSettings`)](#3-マスタ編集画面-hadbitsettings)
     - [4. 統計画面 (`/analytics`)](#4-統計画面-analytics)
   - [論理構成図（テーブル定義）](#論理構成図テーブル定義)
-    - [1. Users (ユーザー情報)](#1-users-ユーザー情報)
-    - [2. habit\_items (習慣項目マスタ)](#2-habit_items-習慣項目マスタ)
-    - [3. habit\_item\_tree (習慣項目階層管理)](#3-habit_item_tree-習慣項目階層管理)
-    - [4. habit\_logs (実施記録)](#4-habit_logs-実施記録)
+    - [1. Users (auth.users / Supabase既存)](#1-users-authusers--supabase既存)
+    - [2. hadbit\_items (習慣項目マスタ)](#2-hadbit_items-習慣項目マスタ)
+    - [3. hadbit\_trees (習慣項目階層管理)](#3-hadbit_trees-習慣項目階層管理)
+    - [4. hadbit\_logs (実施記録)](#4-hadbit_logs-実施記録)
     - [構成のポイント](#構成のポイント)
   - [DDL](#ddl)
 - [クエリ頑張る系](#クエリ頑張る系)
+    - [コンバートクエリ](#コンバートクエリ)
+- [履歴](#履歴)
 
 
 # hadbit-fastapi
@@ -180,7 +182,7 @@ docker run --rm -p 8000:10000 --env-file .env --name my-test-container testlogin
 | --- | --- | --- | --- |
 | **スタート画面** | `/dashboard` | `DashboardView` | ログイン後の拠点となるポータル。各機能へのハブ。 |
 | **登録画面** | `/hadbit/records` | `hadbit_recordrds` | 習慣化マスタをボタン表示し、実績を記録するメイン画面。 |
-| **マスタ編集画面** | `/hadbit/Settings` | `hadbit_settings` | カテゴリや項目の階層構造、表示順を設定する画面。 |
+| **マスタ編集画面** | `/hadbit/Items` | `hadbit_Items` | カテゴリや項目の階層構造、表示順を設定する画面。 |
 | **統計画面** | `/hadbit/analytics` | `hadbit_analytics` | 日・週・月ごとの実施状況を可視化する画面。 |
 | **（詳細・編集）** | `/hadbit/records/:id/edit` | `RecordEditView` | 登録した記録の日時修正や削除を行うための詳細画面。 |
 
@@ -211,63 +213,66 @@ docker run --rm -p 8000:10000 --env-file .env --name my-test-container testlogin
 
 ## 論理構成図（テーブル定義）
 
-### 1. Users (ユーザー情報)
+### 1. Users (auth.users / Supabase既存)
 
-※テーブル定義のSQLには含まれていませんでしたが、各テーブルから参照されているため、一般的な構成で記載します。
+Supabase Authが管理するユーザーテーブルです。
 
-| カラム名 | データ型 | NULL許容 | 説明 | 主キー/その他 |
+| カラム名 | データ型 | NULL許容 | 説明 | 備考 |
 | --- | --- | --- | --- | --- |
-| id | SERIAL | NO | ユーザーの一意識別ID | 主キー |
-| user_name | TEXT | NO | ログインユーザー名 |  |
+| **id** | UUID | NO | ユーザーの一意識別ID | 主キー |
+| email | TEXT | NO | メールアドレス |  |
 
 ---
 
-### 2. habit_items (習慣項目マスタ)
+### 2. hadbit_items (習慣項目マスタ)
 
-習慣化したいアクション自体の情報を保持するメインマスタです。
+習慣項目の基本情報を保持します。`user_id` が `UUID` に変更されています。
 
-| カラム名 | データ型 | NULL許容 | 説明 | 主キー/その他 |
+| カラム名 | データ型 | NULL許容 | 説明 | 備考 |
 | --- | --- | --- | --- | --- |
 | **id** | SERIAL | NO | 項目の一意識別ID | 主キー |
-| user_id | INTEGER | NO | 所有者ユーザーのID | 外部キー (Users.id) |
-| name | TEXT | NO | 習慣の名前（例：「階段利用」） |  |
+| **user_id** | **UUID** | NO | 所有者ユーザーのID | 外部キー (`auth.users.id`) |
+| name | TEXT | NO | 習慣の名前 |  |
 | short_name | TEXT | YES | 略称 |  |
-| description | TEXT | YES | 項目の詳細説明 |  |
-| parent_flag | BOOLEAN | YES | 親カテゴリかどうかのフラグ | デフォルト: false |
+| description | TEXT | YES | 詳細説明 |  |
+| parent_flag | BOOLEAN | YES | 親カテゴリフラグ | デフォルト: false |
 | public_flag | BOOLEAN | YES | 公開設定 | デフォルト: false |
-| visible_flag | BOOLEAN | YES | 画面表示の有無 | デフォルト: true |
-| delete_flag | BOOLEAN | YES | 論理削除フラグ | デフォルト: false |
-| item_style | JSONB | YES | UI用スタイル設定（色、アイコン等） | JSON形式 |
+| visible_flag | BOOLEAN | YES | 表示有無 | デフォルト: true |
+| delete_flag | BOOLEAN | YES | 削除フラグ | デフォルト: false |
+| **is_deleted** | BOOLEAN | YES | 削除状態（新設） | デフォルト: false |
+| item_style | JSONB | YES | UIスタイル設定 | JSON形式 |
 | updated_at | TIMESTAMP | NO | 最終更新日時 | 既定値: CURRENT_TIMESTAMP |
 | created_at | TIMESTAMP | NO | レコード作成日時 | 既定値: CURRENT_TIMESTAMP |
 
 ---
 
-### 3. habit_item_tree (習慣項目階層管理)
+### 3. hadbit_trees (習慣項目階層管理)
 
-項目の親子関係と、表示順序を管理する構造テーブルです。
+ツリー構造と並び順を管理します。今回の設計変更で **`user_id` が追加** されています。
 
-| カラム名 | データ型 | NULL許容 | 説明 | 主キー/その他 |
+| カラム名 | データ型 | NULL許容 | 説明 | 備考 |
 | --- | --- | --- | --- | --- |
-| **item_id** | INTEGER | NO | 対象の項目ID | 主キー / 外部キー (habit_items.id) |
-| parent_id | INTEGER | YES | 親カテゴリの項目ID | 外部キー (habit_items.id) |
-| order_no | INTEGER | YES | 画面上の表示順序 |  |
+| **item_id** | INTEGER | NO | 対象の項目ID | 主キー / 外部キー (`hadbit_items.id`) |
+| **user_id** | **UUID** | NO | 所有者ユーザーのID | 外部キー (`auth.users.id`) |
+| parent_id | INTEGER | YES | 親項目のID | 0 または NULL でルート |
+| order_no | INTEGER | YES | 表示順序 |  |
 
 ---
 
-### 4. habit_logs (実施記録)
+### 4. hadbit_logs (実施記録)
 
-ユーザーが習慣を実行した際の履歴データです。
+ユーザーの習慣実施履歴です。`user_id` が `UUID` に更新されています。
 
-| カラム名 | データ型 | NULL許容 | 説明 | 主キー/その他 |
+| カラム名 | データ型 | NULL許容 | 説明 | 備考 |
 | --- | --- | --- | --- | --- |
 | **id** | SERIAL | NO | 記録の一意識別ID | 主キー |
-| user_id | INTEGER | NO | 実施したユーザーのID | 外部キー (Users.id) |
-| item_id | INTEGER | NO | 実施した項目のID | 外部キー (habit_items.id) |
-| done_at | TIMESTAMP | YES | 習慣を実施した日時 |  |
-| comment | TEXT | YES | 実施時のメモ、一言 |  |
-| updated_at | TIMESTAMP | NO | 記録の最終更新日時 | 既定値: CURRENT_TIMESTAMP |
+| **user_id** | **UUID** | NO | 実施したユーザーのID | 外部キー (`auth.users.id`) |
+| item_id | INTEGER | NO | 対象の項目ID | 外部キー (`hadbit_items.id`) |
+| done_at | TIMESTAMP | YES | 実施日時 |  |
+| comment | TEXT | YES | 実施時のメモ |  |
+| updated_at | TIMESTAMP | NO | 最終更新日時 | 既定値: CURRENT_TIMESTAMP |
 | created_at | TIMESTAMP | NO | レコード作成日時 | 既定値: CURRENT_TIMESTAMP |
+
 
 ---
 
@@ -279,28 +284,12 @@ docker run --rm -p 8000:10000 --env-file .env --name my-test-container testlogin
 
 こ
 ## DDL
-
+新テーブル対応
 ```sql
 
-create table public.mail_to_id (
+create table public.hadbit_items (
   id serial not null,
-  mail text not null,
-  constraint mail_to_id_pkey primary key (id)
-) TABLESPACE pg_default;
-
-create table public.habit_item_tree (
-  item_id integer not null,
-  parent_id integer null,
-  order_no integer null,
-  constraint habit_item_tree_pkey primary key (item_id),
-  constraint fk_habit_item_tree_item_id foreign KEY (item_id) references habit_items (id) on delete CASCADE
-) TABLESPACE pg_default;
-
-create index IF not exists idx_habit_item_tree_item_id on public.habit_item_tree using btree (item_id) TABLESPACE pg_default;
-
-create table public.habit_items (
-  id serial not null,
-  user_id integer not null,
+  user_id uuid not null,
   name text not null,
   short_name text null,
   description text null,
@@ -311,42 +300,156 @@ create table public.habit_items (
   updated_at timestamp without time zone not null default CURRENT_TIMESTAMP,
   created_at timestamp without time zone not null default CURRENT_TIMESTAMP,
   item_style jsonb null,
-  constraint habit_items_pkey primary key (id)
+  constraint hadbit_items_pkey primary key (id)
 ) TABLESPACE pg_default;
 
-create index IF not exists idx_habit_items_user_id on public.habit_items using btree (user_id) TABLESPACE pg_default;
+create index IF not exists idx_hadbit_items_user_id on public.hadbit_items using btree (user_id) TABLESPACE pg_default;
 
-create table public.habit_logs (
+
+create table public.hadbit_trees (
+  item_id integer not null,
+  user_id uuid not null,
+  parent_id integer null,
+  order_no integer null,
+  constraint hadbit_trees_pkey primary key (item_id),
+  constraint fk_hadbit_trees_item_id foreign KEY (item_id) references hadbit_items (id) on delete CASCADE
+) TABLESPACE pg_default;
+
+create index IF not exists idx_hadbit_trees_item_id on public.hadbit_trees using btree (item_id) TABLESPACE pg_default;
+
+create table public.hadbit_logs (
   id serial not null,
-  user_id integer not null,
+  user_id uuid not null,
   item_id integer not null,
   done_at timestamp without time zone null,
   updated_at timestamp without time zone not null default CURRENT_TIMESTAMP,
   created_at timestamp without time zone not null default CURRENT_TIMESTAMP,
   comment text null,
-  constraint habit_logs_pkey primary key (id)
+  constraint hadbit_logs_pkey primary key (id)
 ) TABLESPACE pg_default;
 
-create index IF not exists idx_habit_logs_user_id on public.habit_logs using btree (user_id) TABLESPACE pg_default;
+create index IF not exists idx_hadbit_logs_user_id on public.hadbit_logs using btree (user_id) TABLESPACE pg_default;
 
-create index IF not exists idx_habit_logs_item_id on public.habit_logs using btree (item_id) TABLESPACE pg_default;
+create index IF not exists idx_hadbit_logs_item_id on public.hadbit_logs using btree (item_id) TABLESPACE pg_default;
+
+
 ```
 
 # クエリ頑張る系
 ```sql
 SELECT 
-  hp.id as parent_id, 
-  hp.name as parent_name, 
-  hp.short_name as parent_short_name,
-  hit.order_no as parent_order_no,
-  hi.description as parent_description ,
-  hi.id , hi.name , hi.short_name,
-  hi.description
-FROM habit_items hi
-INNER JOIN habit_item_tree hit 
-  ON hi.id = hit.item_id
-INNER JOIN habit_items hp 
-  ON  hit.parent_id = hp.id 
-WHERE hi.user_id = 1
-order by hit.order_no
+  -- 親アイテムの情報
+  parent_item.user_id,
+  parent_item.id           AS parent_id,
+  parent_tree.order_no     AS parent_sort_order,
+  parent_item.name         AS parent_name, 
+  parent_item.short_name   AS parent_short_name,
+  parent_item.description  AS parent_description,
+
+  -- 子アイテムの情報
+  child_tree.item_id       AS child_id,
+  child_tree.order_no      AS child_sort_order,
+  child_item.name          AS child_name,
+  child_item.short_name    AS child_short_name,
+  child_item.description   AS child_description 
+FROM hadbit_trees AS parent_tree
+INNER JOIN hadbit_items AS parent_item
+  ON parent_tree.item_id = parent_item.id
+  AND parent_item.user_id = 1
+INNER JOIN habdit_trees AS child_tree
+  ON child_tree.parent_id = parent_tree.item_id
+INNER JOIN hadbit_items AS child_item
+  ON child_tree.item_id = child_item.id
+  AND child_item.user_id = 1
+WHERE parent_tree.parent_id = 0
+ORDER BY 
+  parent_sort_order, 
+  child_sort_order;
+
 ```
+### コンバートクエリ
+```sql 
+DO $$
+DECLARE
+    -- ★ ここに対象ユーザーのメールアドレスを指定してください ★
+    target_email text := 'syunjyu0001@gmail.com';
+    
+    old_user_id int;
+    new_user_uuid uuid;
+BEGIN
+    -- 1. ユーザーIDの紐付け取得
+    SELECT m.id, u.id INTO old_user_id, new_user_uuid
+    FROM public.mail_to_id m
+    JOIN auth.users u ON m.mail = u.email
+    WHERE m.mail = target_email;
+
+    IF old_user_id IS NULL OR new_user_uuid IS NULL THEN
+        RAISE EXCEPTION 'ユーザーが見つかりません: %', target_email;
+    END IF;
+
+    -- 2. 新テーブルから対象ユーザーの既存データを削除 (外部キー CASCADE により tree も削除される)
+    DELETE FROM public.hadbit_logs WHERE user_id = new_user_uuid;
+    DELETE FROM public.hadbit_items WHERE user_id = new_user_uuid;
+
+    -- 3. hadbit_items への移行
+    -- id は指定せず PostgreSQL のシリアル採番に任せる
+    INSERT INTO public.hadbit_items (
+        user_id, name, short_name, description, 
+        parent_flag, public_flag, visible_flag, delete_flag, 
+        updated_at, created_at, item_style, is_deleted
+    )
+    SELECT 
+        new_user_uuid, name, short_name, description, 
+        parent_flag, public_flag, visible_flag, delete_flag, 
+        updated_at, created_at, item_style, delete_flag
+    FROM public.habit_items
+    WHERE user_id = old_user_id
+    ORDER BY id ASC; -- IDの順序を維持して採番させるため
+
+    -- 4. hadbit_trees への移行
+    -- item_id の紐付けが必要なため、名前等でマッチングして新旧IDを結合
+    INSERT INTO public.hadbit_trees (item_id, user_id, parent_id, order_no)
+    SELECT 
+        new_item.id,
+        new_user_uuid,
+        parent_item.id, -- 新しい親IDをセット
+        tree.order_no
+    FROM public.habit_item_tree tree
+    JOIN public.habit_items old_item ON tree.item_id = old_item.id
+    JOIN public.hadbit_items new_item ON new_item.name = old_item.name AND new_item.user_id = new_user_uuid
+    LEFT JOIN public.habit_items old_parent ON tree.parent_id = old_parent.id
+    LEFT JOIN public.hadbit_items parent_item ON parent_item.name = old_parent.name AND parent_item.user_id = new_user_uuid
+    WHERE old_item.user_id = old_user_id;
+
+    -- 5. hadbit_logs への移行
+    INSERT INTO public.hadbit_logs (
+        user_id, item_id, done_at, updated_at, created_at, comment
+    )
+    SELECT 
+        new_user_uuid,
+        new_item.id,
+        logs.done_at,
+        logs.updated_at,
+        logs.created_at,
+        logs.comment
+    FROM public.habit_logs logs
+    JOIN public.habit_items old_item ON logs.item_id = old_item.id
+    JOIN public.hadbit_items new_item ON new_item.name = old_item.name AND new_item.user_id = new_user_uuid
+    WHERE logs.user_id = old_user_id;
+
+    RAISE NOTICE 'コンバート完了: %', target_email;
+END $$;
+
+--parent_idがnullになったときに0に戻す
+--update hadbit_trees
+--set parent_id = 0
+--  where user_id = '76b8d0ed-825d-43a6-a725-37e10c11015b'
+--  and parent_id is null
+
+```
+# 履歴
+- 2026/2/1 
+  - renderへデプロイ
+- 2026/1/24 
+  - FastAPIのBase作成完了
+  - それベースでの作成開始

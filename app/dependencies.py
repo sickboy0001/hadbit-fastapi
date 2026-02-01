@@ -10,6 +10,16 @@ from .database import get_db
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
+# グローバルなナビゲーションリンク定義
+# templates.env.globals に追加することで、全てのテンプレートで {{ nav_links }} が利用可能になります
+NAV_LINKS = [
+    {'href': '/dashboard', 'icon': 'fas fa-tachometer-alt', 'label': 'ダッシュボード'},
+    {'href': '/settings', 'icon': 'fas fa-cog', 'label': '設定'},
+    {'href': '/hadbit/items', 'icon': 'fas fa-list', 'label': '習慣マスタ'},
+    {'href': '/hadbit/records', 'icon': 'fas fa-edit', 'label': '習慣ログ'}
+]
+templates.env.globals["nav_links"] = NAV_LINKS
+
 async def get_current_user(request: Request, db: Session = Depends(get_db)):
     """
     Cookieからアクセストークンを取得し、Supabaseでユーザー情報を取得する。

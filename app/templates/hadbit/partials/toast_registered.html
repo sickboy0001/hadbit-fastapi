@@ -1,0 +1,14 @@
+<div hx-swap-oob="beforeend:#toast-container">
+  <div
+    id="toast-registered-{{ log_id }}"
+    class="alert alert-success shadow-lg mb-2"
+  >
+    <span>{{ message|default('登録しました。') }}</span>
+  </div>
+  <script>
+    setTimeout(() => {
+      const el = document.getElementById("toast-registered-{{ log_id }}");
+      if (el) el.remove();
+    }, 3000);
+  </script>
+</div>

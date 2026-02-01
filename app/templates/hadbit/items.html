@@ -1,0 +1,164 @@
+{% extends "base.html" %} {% block title %}登録画面 - Hadbit{% endblock %} {%
+block content %}
+<div class="mb-5">
+  <a href="/dashboard" class="link link-hover">← ダッシュボードへ戻る</a>
+</div>
+<h1 class="text-3xl font-bold mb-4">習慣マスタ画面</h1>
+<p class="mb-2">ログインユーザー: {{ user.email }}</p>
+<p class="mb-6">習慣化したい項目、登録画面での表現、並び順などを整理します。</p>
+
+<div class="grid grid-cols-2 gap-6">
+  <div>
+    <div class="text-lg font-bold mb-2">並び順・種類分け</div>
+    <div id="parent-list">
+      {% if habits %} {% for grouper, items in
+      habits|groupby('parent_sort_order') %}
+      <div
+        class="card bg-base-100 shadow-md border border-base-300 mb-4"
+        data-id="{{ items[0].parent_id }}"
+      >
+        <div class="card-body p-4">
+          <h2
+            class="card-title text-xl font-bold border-b border-base-200 pb-2 mb-2 flex justify-between items-center"
+          >
+            <div class="flex items-center gap-2">
+              <span>{{ items[0].parent_name }}</span>
+            </div>
+            <div class="flex gap-1">
+              {% if not loop.first %}
+              <button
+                class="btn btn-sm btn-ghost"
+                hx-post="/hadbit/items/{{ items[0].parent_id }}/move_up"
+                hx-target="body"
+              >
+                <i class="fas fa-arrow-up"></i>
+              </button>
+              {% endif %} {% if not loop.last %}
+              <button
+                class="btn btn-sm btn-ghost"
+                hx-post="/hadbit/items/{{ items[0].parent_id }}/move_down"
+                hx-target="body"
+              >
+                <i class="fas fa-arrow-down"></i>
+              </button>
+              {% endif %}
+              <button
+                class="btn btn-sm btn-ghost"
+                hx-get="/hadbit/items/{{ items[0].parent_id }}/edit"
+                hx-target="#edit-area"
+              >
+                <i class="fas fa-edit"></i> 編集
+              </button>
+              <button
+                class="btn btn-sm btn-ghost text-error"
+                hx-delete="/hadbit/items/{{ items[0].parent_id }}"
+                hx-target="body"
+              >
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </h2>
+          <div class="flex flex-col gap-2 child-list">
+            {% for habit in items %}
+            <div
+              class="flex justify-between items-center p-3 bg-base-200 rounded-lg"
+              data-id="{{ habit.child_id }}"
+            >
+              <div class="flex items-center gap-2">
+                <span class="text-lg">{{ habit.child_name }}</span>
+              </div>
+              <div class="flex gap-1">
+                {% if not loop.first %}
+                <button
+                  class="btn btn-sm btn-ghost"
+                  hx-post="/hadbit/items/{{ habit.child_id }}/move_up"
+                  hx-target="body"
+                >
+                  <i class="fas fa-arrow-up"></i>
+                </button>
+                {% endif %} {% if not loop.last %}
+                <button
+                  class="btn btn-sm btn-ghost"
+                  hx-post="/hadbit/items/{{ habit.child_id }}/move_down"
+                  hx-target="body"
+                >
+                  <i class="fas fa-arrow-down"></i>
+                </button>
+                {% endif %}
+                <button
+                  class="btn btn-sm btn-ghost"
+                  hx-get="/hadbit/items/{{ habit.child_id }}/edit"
+                  hx-target="#edit-area"
+                >
+                  <i class="fas fa-edit"></i> 編集
+                </button>
+                <button
+                  class="btn btn-sm btn-ghost text-error"
+                  hx-delete="/hadbit/items/{{ habit.child_id }}"
+                  hx-target="body"
+                >
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+            {% endfor %}
+            <button
+              class="btn btn-sm btn-outline btn-primary border-dashed w-full mt-2"
+              hx-post="/hadbit/items/{{ items[0].parent_id }}/new_child"
+              hx-target="body"
+            >
+              <i class="fas fa-plus"></i> 項目追加
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endfor %} {% else %}
+      <p>現在、登録されている習慣はありません。</p>
+      {% endif %}
+    </div>
+    <button
+      class="btn btn-sm btn-primary mt-2 w-full"
+      hx-post="/hadbit/items/new"
+      hx-target="body"
+    >
+      <i class="fas fa-plus"></i> 種別追加
+    </button>
+  </div>
+  <div>
+    <div class="text-lg font-bold mb-2">編集エリア</div>
+    <div
+      id="edit-area"
+      class="card bg-base-100 shadow-md border border-base-300 p-6 sticky top-4"
+    >
+      <p class="text-gray-500">
+        左側のリストから「編集」ボタンを押すと、ここに編集フォームが表示されます。
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+{% if deleted_item_id %}
+<div class="toast toast-end z-50">
+  <div class="alert alert-info shadow-lg">
+    <div>
+      <span>項目を削除しました。</span>
+    </div>
+    <div class="flex-none">
+      <button
+        class="btn btn-sm btn-ghost"
+        hx-post="/hadbit/items/{{ deleted_item_id }}/restore"
+        hx-target="body"
+      >
+        取り消し
+      </button>
+    </div>
+  </div>
+</div>
+{% endif %} {% if restored_message %}
+<div class="toast toast-end z-50">
+  <div class="alert alert-success shadow-lg">
+    <span>{{ restored_message }}</span>
+  </div>
+</div>
+{% endif %} {% endblock %} {% block scripts %} {% endblock %}

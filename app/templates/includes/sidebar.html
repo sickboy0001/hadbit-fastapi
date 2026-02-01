@@ -14,20 +14,15 @@
 
   <!-- Navigation -->
   <nav class="flex-1 px-2 py-4 space-y-2 overflow-y-auto">
+    {% for link in nav_links %}
     <a
-      href="/dashboard"
+      href="{{ link.href }}"
       class="flex items-center px-4 py-2 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors"
     >
-      <i class="fas fa-tachometer-alt w-6"></i>
-      <span>ダッシュボード</span>
+      <i class="{{ link.icon }} w-6"></i>
+      <span>{{ link.label }}</span>
     </a>
-    <a
-      href="/settings"
-      class="flex items-center px-4 py-2 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors"
-    >
-      <i class="fas fa-cog w-6"></i>
-      <span>設定</span>
-    </a>
+    {% endfor %}
   </nav>
 
   <!-- Sidebar Footer -->

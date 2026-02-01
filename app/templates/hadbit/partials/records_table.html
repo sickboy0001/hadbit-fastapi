@@ -1,0 +1,67 @@
+{% if not oob and not update %}
+<div class="overflow-x-auto">
+<table class="table table-zebra w-full">
+  <thead>
+    <tr>
+      <th>日時</th>
+      <th>id</th>
+      <th>種別</th>
+      <th>id</th>
+      <th>項目</th>
+      <th>メモ</th>
+      <th>操作</th>
+    </tr>
+  </thead>
+  <tbody id="records-table-body">
+{% else %}
+<table>
+  <tbody id="records-table-body">
+{% endif %}
+
+    {% for log in logs %}
+    <tr id="log-{{ log.log_id }}" {% if update %}hx-swap-oob="outerHTML:#log-{{ log.log_id }}"{% elif oob %}hx-swap-oob="afterbegin:#records-table-body"{% endif %}>
+      <td>{{ log.done_at.strftime('%Y-%m-%d %H:%M') }}</td>
+      <td>{{ log.parent_item_id }}</td>
+      <td>{{ log.parent_short_name }}</td>
+      <td>{{ log.child_item_id }}</td>
+      <td>{{ log.child_short_name }}</td>
+      <td>
+        <div
+          hx-get="/api/records/{{ log.log_id }}/memo"
+          hx-trigger="click"
+          hx-swap="outerHTML"
+          class="cursor-pointer hover:bg-base-200 p-1 rounded min-h-[1.5rem] min-w-[4rem]"
+        >
+          {% if log.comment %} {{ log.comment }} {% else %}
+          <span class="text-gray-400 text-xs">(メモなし)</span>
+          {% endif %}
+        </div>
+      </td>
+      <td>
+        <button 
+          class="btn btn-ghost btn-xs"
+          hx-get="/hadbit/records/{{ log.log_id }}/edit"
+          hx-target="#modal-container"
+          hx-swap="innerHTML">
+          編集
+        </button>
+        <button
+          class="btn btn-error btn-xs"
+          hx-delete="/api/logs/delete/{{ log.log_id }}"
+          hx-target="closest tr"
+          hx-swap="outerHTML"
+        >
+          削除
+        </button>
+      </td>
+    </tr>
+    {% endfor %}
+
+{% if not oob and not update %}
+  </tbody>
+</table>
+</div>
+{% else %}
+  </tbody>
+</table>
+{% endif %}
