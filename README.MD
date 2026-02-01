@@ -118,6 +118,7 @@ Renderを利用したCI/CDが自動化されています。
 3. **自動デプロイ**: ビルド成功後、Web Serviceとして自動デプロイ。
 4. **環境変数管理**: Render Dashboardおよびローカルの `.env` で秘匿情報を管理。
 
+- [デプロイ先-Render-hadbit](https://hadbit-fastapi.onrender.com/dashboard)
 ---
 
 Dockerでの起動方法
