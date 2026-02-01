@@ -1,0 +1,66 @@
+<div class="w-full bg-base-100 p-2 rounded-lg border border-base-200">
+  <div id="calendar"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<script>
+  (function() {
+    const calendarEl = document.getElementById('calendar');
+    if (!calendarEl) return;
+
+    // 現在の月の前月を初期表示位置にする
+    const today = new Date();
+    const startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+      initialDate: startDate,
+      initialView: 'multiMonthTwoMonth',
+      views: {
+        multiMonthTwoMonth: {
+          type: 'multiMonthYear',
+          duration: { months: 2 },
+          dateIncrement: { months: 1 }
+        }
+      },
+      multiMonthMaxColumns: 1,
+      locale: 'ja',
+      height: 'auto',
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: ''
+      },
+      buttonText: {
+        today: '今日',
+      },
+      firstDay: 0, // 日曜日始まり
+      events: [
+        {% for log in logs %}
+        {
+          title: '{{ log.child_name }}',
+          start: '{{ log.done_at.isoformat() }}',
+          allDay: false,
+          backgroundColor: 'oklch(var(--p))',
+          borderColor: 'oklch(var(--p))',
+          textColor: 'oklch(var(--pc))'
+        },
+        {% endfor %}
+      ],
+      eventTimeFormat: {
+        hour: '2-digit',
+        minute: '2-digit',
+        meridiem: false
+      }
+    });
+
+    // タブ切り替え時の表示崩れ防止（コンテナが表示されたタイミングで再描画）
+    const observer = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        if (entry.contentRect.width > 0) {
+          calendar.render();
+        }
+      }
+    });
+    observer.observe(calendarEl);
+  })();
+</script>

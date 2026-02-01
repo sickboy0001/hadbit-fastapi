@@ -1,0 +1,83 @@
+<div
+  class="w-full overflow-x-auto bg-base-100 p-4 rounded-lg border border-base-200 flex justify-center"
+>
+  <div id="cal-heatmap"></div>
+</div>
+
+<!-- Cal-Heatmap v4 & Dependencies -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://unpkg.com/cal-heatmap/dist/cal-heatmap.min.js"></script>
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/cal-heatmap/dist/cal-heatmap.css"
+/>
+<!-- Tooltip Plugin -->
+<script src="https://unpkg.com/@popperjs/core@2"></script>
+<script src="https://unpkg.com/cal-heatmap/dist/plugins/Tooltip.min.js"></script>
+
+<script>
+  (function() {
+    // ログデータをJavaScriptオブジェクト配列に変換
+    const rawData = [
+      {% for log in logs %}
+      { date: "{{ log.done_at.isoformat() }}", value: 1 },
+      {% endfor %}
+    ];
+
+    // 日付ごとに件数を集計 (YYYY-MM-DD単位)
+    const dataMap = {};
+    rawData.forEach(item => {
+      const day = item.date.substring(0, 10);
+      dataMap[day] = (dataMap[day] || 0) + item.value;
+    });
+
+    const sourceData = Object.keys(dataMap).map(key => ({
+      date: key,
+      value: dataMap[key]
+    }));
+
+    // 表示期間の設定（現在から過去12ヶ月）
+    const now = new Date();
+    const startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+
+    // Cal-Heatmapの描画
+    const cal = new CalHeatmap();
+    cal.paint({
+      itemSelector: '#cal-heatmap',
+      range: 12,
+      domain: {
+        type: 'month',
+        gutter: 10,
+        label: { text: 'YYYY/MM', position: 'top' },
+      },
+      subDomain: {
+        type: 'day',
+        radius: 2,
+        width: 12,
+        height: 12,
+        gutter: 2
+      },
+      date: { start: startDate },
+      data: {
+        source: sourceData,
+        x: 'date',
+        y: 'value'
+      },
+      scale: {
+        color: {
+          type: 'threshold',
+          range: ['#f3f4f6', '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d'],
+          domain: [1, 2, 3, 5, 7, 10]
+        },
+      },
+      theme: 'light',
+    }, [
+      [
+        Tooltip,
+        {
+          text: (date, value, dayjsDate) => (value ? value : 0) + ' 件 (' + dayjsDate.format('YYYY-MM-DD') + ')',
+        },
+      ],
+    ]);
+  })();
+</script>

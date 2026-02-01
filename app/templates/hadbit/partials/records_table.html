@@ -1,67 +1,48 @@
 {% if not oob and not update %}
-<div class="overflow-x-auto">
-<table class="table table-zebra w-full">
-  <thead>
-    <tr>
-      <th>日時</th>
-      <th>id</th>
-      <th>種別</th>
-      <th>id</th>
-      <th>項目</th>
-      <th>メモ</th>
-      <th>操作</th>
-    </tr>
-  </thead>
-  <tbody id="records-table-body">
-{% else %}
-<table>
-  <tbody id="records-table-body">
+<div id="records-list" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start" {% if swap_all %}hx-swap-oob="true"{% endif %}>
 {% endif %}
 
-    {% for log in logs %}
-    <tr id="log-{{ log.log_id }}" {% if update %}hx-swap-oob="outerHTML:#log-{{ log.log_id }}"{% elif oob %}hx-swap-oob="afterbegin:#records-table-body"{% endif %}>
-      <td>{{ log.done_at.strftime('%Y-%m-%d %H:%M') }}</td>
-      <td>{{ log.parent_item_id }}</td>
-      <td>{{ log.parent_short_name }}</td>
-      <td>{{ log.child_item_id }}</td>
-      <td>{{ log.child_short_name }}</td>
-      <td>
-        <div
-          hx-get="/api/records/{{ log.log_id }}/memo"
-          hx-trigger="click"
-          hx-swap="outerHTML"
-          class="cursor-pointer hover:bg-base-200 p-1 rounded min-h-[1.5rem] min-w-[4rem]"
-        >
-          {% if log.comment %} {{ log.comment }} {% else %}
-          <span class="text-gray-400 text-xs">(メモなし)</span>
-          {% endif %}
-        </div>
-      </td>
-      <td>
-        <button 
-          class="btn btn-ghost btn-xs"
-          hx-get="/hadbit/records/{{ log.log_id }}/edit"
-          hx-target="#modal-container"
-          hx-swap="innerHTML">
-          編集
-        </button>
-        <button
-          class="btn btn-error btn-xs"
-          hx-delete="/api/logs/delete/{{ log.log_id }}"
-          hx-target="closest tr"
-          hx-swap="outerHTML"
-        >
-          削除
-        </button>
-      </td>
-    </tr>
-    {% endfor %}
+{% if not oob and not update %}
+  {% set ns = namespace(current_date=None) %}
+  {% for log in logs %}
+    {% set log_date = log.done_at.strftime('%Y-%m-%d') %}
+    {% if ns.current_date != log_date %}
+      {% if ns.current_date is not none %}
+        </div></div></div>
+      {% endif %}
+      <div class="card bg-base-100 shadow-sm border border-base-200">
+        <div class="card-body p-4">
+          <h3 class="card-title text-lg border-b border-base-200 mb-2 pb-2">{{ log_date }}</h3>
+          <div class="flex flex-col">
+      {% set ns.current_date = log_date %}
+    {% endif %}
+    
+    <div id="log-{{ log.log_id }}" class="record-row flex items-center gap-2 py-2 border-b border-base-100 last:border-none">
+      <span class="text-sm text-gray-500">{{ log.done_at.strftime('%H:%M') }}</span>
+      <span class="font-semibold">[{{ log.parent_short_name }}] {{ log.child_short_name }}</span>
+      <div class="flex gap-2">
+        <button class="btn btn-outline btn-info btn-sm" hx-get="/hadbit/records/{{ log.log_id }}/edit" hx-target="#modal-container" hx-swap="innerHTML">編集</button>
+        <button class="btn btn-outline btn-error btn-sm" hx-delete="/api/logs/delete/{{ log.log_id }}" hx-target="closest .record-row" hx-swap="outerHTML">削除</button>
+      </div>
+    </div>
+
+    {% if loop.last %}
+      </div></div></div>
+    {% endif %}
+  {% endfor %}
+{% else %}
+  {% for log in logs %}
+    <div id="log-{{ log.log_id }}" class="record-row flex items-center gap-2 py-2 border-b border-base-100 last:border-none"{% if update %}hx-swap-oob="outerHTML:#log-{{ log.log_id }}"{% endif %}>
+      <span class="text-sm text-gray-500">{{ log.done_at.strftime('%H:%M') }}</span>
+      <span class="font-semibold">[{{ log.parent_short_name }}] {{ log.child_short_name }}</span>
+      <div class="flex gap-2">
+        <button class="btn btn-outline btn-info btn-sm" hx-get="/hadbit/records/{{ log.log_id }}/edit" hx-target="#modal-container" hx-swap="innerHTML">編集</button>
+        <button class="btn btn-outline btn-error btn-sm" hx-delete="/api/logs/delete/{{ log.log_id }}" hx-target="closest .record-row" hx-swap="outerHTML">削除</button>
+      </div>
+    </div>
+  {% endfor %}
+{% endif %}
 
 {% if not oob and not update %}
-  </tbody>
-</table>
 </div>
-{% else %}
-  </tbody>
-</table>
 {% endif %}

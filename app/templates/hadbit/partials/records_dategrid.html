@@ -1,0 +1,109 @@
+<div class="w-full bg-base-100 p-4 rounded-lg border border-base-200">
+  <div id="grid"></div>
+</div>
+
+<link
+  rel="stylesheet"
+  href="https://uicdn.toast.com/grid/latest/tui-grid.css"
+/>
+<style>
+  /* 固定列の背景色が透けないようにDaisyUIのテーマカラーを適用 */
+  .tui-grid-cell.tui-grid-cell-frozen-left {
+    background-color: oklch(var(--b1)) !important;
+  }
+  /* ヘッダーの固定列は少し濃い色に */
+  .tui-grid-head-area .tui-grid-cell-frozen-left {
+    background-color: oklch(var(--b2)) !important;
+  }
+</style>
+<script src="https://uicdn.toast.com/grid/latest/tui-grid.js"></script>
+
+<script>
+    (function() {
+      // ログデータ
+      const rawLogs = [
+        {% for log in logs %}
+        {
+          id: {{ log.log_id }},
+          date: "{{ log.done_at.strftime('%Y-%m-%d') }}",
+          child_name: "{{ log.child_name }}",
+          parent_name: "{{ log.parent_name }}"
+        },
+        {% endfor %}
+      ];
+
+      // 1. 列定義（日付）を作成
+      // 重複を除いた日付リストを取得し、昇順（古い順）にソート
+      const dates = [...new Set(rawLogs.map(log => log.date))].sort();
+
+      const columns = [
+        { header: '項目', name: 'child_name', sortable: true, width: 200 }
+      ];
+
+      dates.forEach(date => {
+        columns.push({
+          header: date.substring(5), // YYYY-MM-DD -> MM-DD
+          name: date,
+          align: 'center',
+          minWidth: 60,
+          formatter: ({ value }) => value ? `<span class="font-bold text-success">✔ ${value}</span>` : ''
+        });
+      });
+
+      // 2. 行データ（習慣項目ごとの集計）を作成
+      const dataMap = {};
+
+      rawLogs.forEach(log => {
+        const key = log.parent_name + '-' + log.child_name; // 親項目と習慣名の組み合わせをキーにする
+        if (!dataMap[key]) {
+          dataMap[key] = { child_name: `[${log.parent_name}]${log.child_name}`, parent_name: log.parent_name };
+        }
+        // 実施回数をカウント
+        const currentVal = dataMap[key][log.date] || 0;
+        dataMap[key][log.date] = currentVal + 1;
+      });
+
+      // オブジェクトから配列に変換し、親項目・子項目順でソート
+      const gridData = Object.values(dataMap).sort((a, b) =>
+        a.parent_name.localeCompare(b.parent_name) || a.child_name.localeCompare(b.child_name)
+      );
+
+  // グリッド描画
+      const el = document.getElementById('grid');
+      el.innerHTML = '';
+
+      const grid = new tui.Grid({
+        el: el,
+        data: gridData,
+        scrollX: true,  // 横スクロールを明示
+        scrollY: true,
+        bodyHeight: 400,
+        columns: columns,
+        columnOptions: {
+          frozenCount: 1,      // 左1列（項目）を固定
+          frozenBorderWidth: 2, // 境界線の太さ
+          resizable: true
+        }
+      });
+
+    // ★ 修正：スクロール処理 ★
+      setTimeout(() => {
+        grid.refreshLayout();
+
+        // 1. カラム情報の最後（右端）を取得
+        const allColumns = grid.getColumns();
+        if (allColumns.length > 0) {
+          const lastColumnName = allColumns[allColumns.length - 1].name;
+
+          // 2. 最後のカラム位置までフォーカス（スクロール）させる
+          // これが最も確実に右端へ飛ばす方法です
+          grid.focusAt(0, allColumns.length - 1);
+
+          // もし青い選択枠が気になる場合は、少しずらしてスクロール実行
+          const scrollInfo = grid.getPagination(); // ページネーションなしでも内部計算に利用
+          // 直接座標を指定する代わりに、最後のカラム名を目指してスクロール
+          grid.scrollToColumn(lastColumnName);
+        }
+      }, 200); // 少し余裕を持って200ms
+    })();
+</script>

@@ -14,9 +14,9 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 # templates.env.globals に追加することで、全てのテンプレートで {{ nav_links }} が利用可能になります
 NAV_LINKS = [
     {'href': '/dashboard', 'icon': 'fas fa-tachometer-alt', 'label': 'ダッシュボード'},
-    {'href': '/settings', 'icon': 'fas fa-cog', 'label': '設定'},
+    {'href': '/hadbit/records', 'icon': 'fas fa-edit', 'label': '習慣ログ'},
     {'href': '/hadbit/items', 'icon': 'fas fa-list', 'label': '習慣マスタ'},
-    {'href': '/hadbit/records', 'icon': 'fas fa-edit', 'label': '習慣ログ'}
+    {'href': '/settings', 'icon': 'fas fa-cog', 'label': '設定'}
 ]
 templates.env.globals["nav_links"] = NAV_LINKS
 

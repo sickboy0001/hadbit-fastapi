@@ -42,6 +42,48 @@ async def hadbit_records(request: Request, user = Depends(get_current_user), db:
     return templates.TemplateResponse("hadbit/records.html", {"request": request, "user": user, "habits": habits, "logs": logs})
 
 
+@router.get("/hadbit/records/calendar", response_class=HTMLResponse)
+async def get_calendar_view(request: Request, user = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user:
+        return HTMLResponse("Unauthorized", status_code=401)
+    
+    logs = []
+    try:
+        logs = get_logs(db, user.id)
+    except Exception as e:
+        print(f"Error fetching logs for calendar: {e}")
+        
+    return templates.TemplateResponse("hadbit/partials/records_calendar.html", {"request": request, "logs": logs})
+
+
+@router.get("/hadbit/records/heatmap", response_class=HTMLResponse)
+async def get_heatmap_view(request: Request, user = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user:
+        return HTMLResponse("Unauthorized", status_code=401)
+    
+    logs = []
+    try:
+        logs = get_logs(db, user.id)
+    except Exception as e:
+        print(f"Error fetching logs for heatmap: {e}")
+        
+    return templates.TemplateResponse("hadbit/partials/records_heatmap.html", {"request": request, "logs": logs})
+
+
+@router.get("/hadbit/records/dategrid", response_class=HTMLResponse)
+async def get_dategrid_view(request: Request, user = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user:
+        return HTMLResponse("Unauthorized", status_code=401)
+    
+    logs = []
+    try:
+        logs = get_logs(db, user.id)
+    except Exception as e:
+        print(f"Error fetching logs for dategrid: {e}")
+        
+    return templates.TemplateResponse("hadbit/partials/records_dategrid.html", {"request": request, "logs": logs})
+
+
 @router.get("/hadbit/records/{id}/edit", response_class=HTMLResponse)
 async def record_edit_view(request: Request, id: int, user = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user:
@@ -100,15 +142,16 @@ async def update_record(
     
     # レコードを特定して更新
     update_hadbit_record(db, user.id, log_id, record_date, memo)
+    db.commit()
         
-    # 更新後のデータを取得して表示
-    log = get_log(db, user.id, log_id)
+    # 全件取得してリスト全体を更新する（日付変更によるグループ移動に対応するため）
+    logs = get_logs(db, user.id)
     
-    # 行の更新用HTML (update=True で行置換モード)
-    table_html = templates.get_template("hadbit/partials/records_table.html").render({"logs": [dict(log._mapping)], "update": True})
+    # リスト全体のHTML (swap_all=True で id="records-list" を OOB swap)
+    table_html = templates.get_template("hadbit/partials/records_table.html").render({"logs": logs, "swap_all": True})
     
     # トースト通知
-    toast_html = templates.get_template("hadbit/partials/toast_registered.html").render({"log_id": log.log_id, "message": "保存しました。"})
+    toast_html = templates.get_template("hadbit/partials/toast_registered.html").render({"log_id": log_id, "message": "保存しました。"})
 
     return HTMLResponse(content=f"{table_html}{toast_html}")
 

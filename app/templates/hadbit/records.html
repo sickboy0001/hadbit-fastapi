@@ -13,10 +13,11 @@ block content %}
       {% for habit in items %}
       <button
         type="button"
-        class="btn btn-outline min-h-0 h-auto py-0.5 px-1 text-sm md:py-3 md:px-4 md:text-lg"
+        class="btn btn-outline min-h-0 h-auto py-1 px-2 text-sm md:py-3 md:px-4 md:text-lg"
         hx-post="/api/records"
         hx-vals='{"hadbit_item_id": {{ habit.child_id }}}'
         hx-swap="none"
+        hx-on::after-request="if(event.detail.successful) window.location.reload()"
       >
         {{ habit.child_name }}
       </button>
@@ -31,7 +32,52 @@ block content %}
 
 <div class="mt-8">
   <h4 class="text-xl font-bold mb-4">記録履歴</h4>
-  {% include "hadbit/partials/records_table.html" %}
+
+  <div role="tablist" class="tabs tabs-bordered mb-4">
+    <a role="tab" class="tab tab-active" onclick="changeTab(event, 'tab-list')"
+      >一覧</a
+    >
+    <a
+      role="tab"
+      class="tab"
+      onclick="changeTab(event, 'tab-heatmap')"
+      hx-get="/hadbit/records/heatmap"
+      hx-target="#tab-heatmap"
+      hx-swap="innerHTML"
+      >ヒートマップ</a
+    >
+    <a
+      role="tab"
+      class="tab"
+      onclick="changeTab(event, 'tab-dategrid')"
+      hx-get="/hadbit/records/dategrid"
+      hx-target="#tab-dategrid"
+      hx-swap="innerHTML"
+      >日付列カレンダー</a
+    >
+    <a
+      role="tab"
+      class="tab"
+      onclick="changeTab(event, 'tab-calendar')"
+      hx-get="/hadbit/records/calendar"
+      hx-target="#tab-calendar"
+      hx-swap="innerHTML"
+      >カレンダー</a
+    >
+  </div>
+
+  <div id="tab-list" class="tab-content-panel">
+    {% include "hadbit/partials/records_table.html" %}
+  </div>
+  <div id="tab-heatmap" class="tab-content-panel hidden">
+    {% include "hadbit/partials/records_heatmap.html" %}
+  </div>
+  <div id="tab-dategrid" class="tab-content-panel hidden">
+    {% include "hadbit/partials/records_dategrid.html" %}
+  </div>
+  <div id="tab-calendar" class="tab-content-panel hidden">
+    {% include "hadbit/partials/records_calendar.html" %}
+  </div>
 </div>
 
 <!-- モーダル表示用コンテナ -->
@@ -39,4 +85,20 @@ block content %}
 
 <!-- トースト通知用のコンテナ -->
 <div id="toast-container" class="toast toast-top toast-end z-50"></div>
+
+<script>
+  function changeTab(event, tabId) {
+    // タブのアクティブ状態切り替え
+    document
+      .querySelectorAll(".tabs .tab")
+      .forEach((t) => t.classList.remove("tab-active"));
+    event.currentTarget.classList.add("tab-active");
+
+    // コンテンツの表示切り替え
+    document
+      .querySelectorAll(".tab-content-panel")
+      .forEach((c) => c.classList.add("hidden"));
+    document.getElementById(tabId).classList.remove("hidden");
+  }
+</script>
 {% endblock %}

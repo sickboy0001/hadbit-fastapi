@@ -43,6 +43,7 @@ def get_log(db: Session, user_id: str, log_id: int):
         INNER JOIN hadbit_trees tree ON tree.item_id = logs.item_id
         INNER JOIN hadbit_items pitem ON pitem.id = tree.parent_id
         WHERE logs.id = :log_id AND logs.user_id = :user_id
+        order by logs.done_at desc , citem.id desc
     """)
     return db.execute(query, {"log_id": log_id, "user_id": user_id}).fetchone()
 
@@ -50,7 +51,11 @@ def update_hadbit_record_memo(db: Session, user_id: str, log_id: int, memo: str)
     """
     指定されたIDの記録のメモを更新する
     """
-    query = text("UPDATE hadbit_logs SET comment = :memo WHERE id = :log_id AND user_id = :user_id")
+    query = text("""
+        UPDATE hadbit_logs SET 
+        comment = :memo 
+        WHERE id = :log_id 
+        AND user_id = :user_id""")
     db.execute(query, {"memo": memo, "log_id": log_id, "user_id": user_id})
 
 def update_hadbit_record(db: Session, user_id: str, log_id: int, record_date: datetime, memo: str):

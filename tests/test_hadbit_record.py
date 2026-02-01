@@ -90,11 +90,3 @@ def test_update_record_endpoint():
             db.execute(text("DELETE FROM hadbit_items WHERE id = :id"), {"id": item_id})
         db.commit()
         db.close()
-```
-
-### テストの実行方法
-
-ターミナルで以下のコマンドを実行してください（`pytest` がインストールされている必要があります）。
-
-```bash
-pytest tests/test_hadbit_record.py
