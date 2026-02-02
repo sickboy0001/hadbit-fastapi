@@ -3,7 +3,7 @@
     <h3 class="font-bold text-lg">記録の編集</h3>
     <div class="py-4">
       <form
-        hx-put="/api/records/regist/{{ log.log_id }}"
+        hx-put="/api/hadbit/records/regist/{{ log.log_id }}"
         hx-swap="none"
         hx-on::after-request="if(event.detail.successful) this.closest('dialog').close()"
       >

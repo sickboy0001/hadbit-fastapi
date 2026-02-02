@@ -6,7 +6,7 @@
     <span>削除しました。</span>
     <button
       class="btn btn-sm btn-ghost underline"
-      hx-post="/api/records/restore"
+      hx-post="/api/hadbit/records/restore"
       hx-vals="{{ restore_vals }}"
       hx-swap="none"
       hx-on::after-request="if(event.detail.successful) window.location.reload()"

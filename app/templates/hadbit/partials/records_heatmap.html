@@ -23,7 +23,18 @@
     </div>
   </div>
   <div class="overflow-x-auto flex justify-center">
-    <div id="cal-heatmap"></div>
+    <div style="display: inline-block">
+      <div id="cal-heatmap"></div>
+      <div class="flex items-center mt-2">
+        <button class="btn btn-sm btn-secondary" onclick="cal.previous()">
+          ← Previous
+        </button>
+        <button class="btn btn-sm btn-secondary ml-2" onclick="cal.next()">
+          Next →
+        </button>
+        <div id="cal-heatmap-legend" class="ml-auto"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -37,6 +48,7 @@
 <!-- Tooltip Plugin -->
 <script src="https://unpkg.com/@popperjs/core@2"></script>
 <script src="https://unpkg.com/cal-heatmap/dist/plugins/Tooltip.min.js"></script>
+<script src="https://unpkg.com/cal-heatmap/dist/plugins/Legend.min.js"></script>
 
 <script>
   (function() {
@@ -62,33 +74,33 @@
       }));
     }
 
-    // 表示期間の設定（現在から過去12ヶ月）
+    // 表示期間の設定（今日から365日前）
     const now = new Date();
-    const startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+    const startDate = new Date(now);
+    startDate.setDate(now.getDate() - 365);
 
     // Cal-Heatmapの描画
-    let cal;
+    window.cal = null; // グローバル変数にしてボタンからアクセス可能にする
+
     function renderHeatmap(parentId) {
       const sourceData = aggregateData(parentId);
 
       // 既存の描画をクリア
       document.getElementById('cal-heatmap').innerHTML = '';
+      document.getElementById('cal-heatmap-legend').innerHTML = '';
 
-      cal = new CalHeatmap();
+      window.cal = new CalHeatmap();
+      const cal = window.cal;
+
       cal.paint({
         itemSelector: '#cal-heatmap',
         range: 12,
         domain: {
           type: 'month',
-          gutter: 10,
-          label: { text: 'YYYY/MM', position: 'top' },
         },
         subDomain: {
           type: 'day',
           radius: 2,
-          width: 12,
-          height: 12,
-          gutter: 2
         },
         date: { start: startDate },
         data: {
@@ -109,6 +121,15 @@
           Tooltip,
           {
             text: (date, value, dayjsDate) => (value ? value : 0) + ' 件 (' + dayjsDate.format('YYYY-MM-DD') + ')',
+          },
+        ],
+        [
+          Legend,
+          {
+            tickSize: 0,
+            width: 150,
+            itemSelector: '#cal-heatmap-legend',
+            label: '件数',
           },
         ],
       ]);

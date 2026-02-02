@@ -27,8 +27,17 @@ function showToast(message, type = 'success') {
     </div>`;
   document.body.appendChild(toast);
 
-  // 3秒後にトーストを削除
-  setTimeout(() => toast.remove(), 3000);
+  // トースト内のHTMX属性（hx-getなど）を有効化
+  // DOM追加直後だと認識されない場合があるため、わずかに遅延させる
+  setTimeout(() => {
+    const htmxObj = window.htmx || (typeof htmx !== 'undefined' ? htmx : null);
+    if (htmxObj) {
+      htmxObj.process(toast);
+    }
+  }, 10);
+
+  // 5秒後にトーストを削除
+  setTimeout(() => toast.remove(), 5000);
 }
 
 // htmxのリクエスト完了イベントを監視
@@ -58,7 +67,7 @@ document.body.addEventListener("htmx:afterRequest", function (evt) {
 
   // 2. パスベースのデフォルト動作（サーバーからの指定がない場合）
   if (isSuccess) {
-    if (path && path.includes("/api/records")) {
+    if (path && path.includes("/api/hadbit/records/create")) {
       showToast("登録しました");
     }
   } else {

@@ -38,10 +38,10 @@ block content %}
       <button
         type="button"
         class="btn btn-outline min-h-0 h-auto py-1 px-2 text-sm md:py-3 md:px-4 md:text-lg"
-        hx-post="/api/records"
+        hx-post="/api/hadbit/records/create"
         hx-vals='{"hadbit_item_id": {{ habit.child_id }}}'
-        hx-swap="none"
-        hx-on::after-request="if(event.detail.successful) window.location.reload()"
+        hx-target="#tab-list"
+        hx-swap="innerHTML"
       >
         {{ habit.child_name }}
       </button>

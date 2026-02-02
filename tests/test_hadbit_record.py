@@ -64,7 +64,7 @@ def test_update_record_endpoint():
         new_memo = "Updated Memo Content"
         
         response = client.put(
-            f"/api/records/regist/{log_id}",
+            f"/api/hadbit/records/regist/{log_id}",
             data={
                 "record_date": new_date_str,
                 "memo": new_memo
