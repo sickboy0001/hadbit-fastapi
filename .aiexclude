@@ -1,0 +1,25 @@
+# 仮想環境 (ここが一番重い原因になります)
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+
+# 依存パッケージ関連
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ビルド・配布関連
+dist/
+build/
+*.egg-info/
+
+# 環境変数・機密情報 (セキュリティのためにも必須)
+.env
+.env.*
+
+# データベース (ローカル開発用)
+*.db
+*.sqlite3
+

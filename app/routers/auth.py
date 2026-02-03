@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
-from ..services.supabase_client import supabase
-from ..dependencies import templates
+from app.services.supabase_client import supabase
+from app.dependencies import templates
 
 router = APIRouter()
 

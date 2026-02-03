@@ -1,3 +1,4 @@
+{% from "hadbit/partials/popmenu_macros.html" import render_log_row %}
 <div class="w-full bg-base-100 p-4 rounded-lg border border-base-200">
   <div class="flex mb-4">
     <div class="join">
@@ -22,121 +23,192 @@
       {% endfor %}
     </div>
   </div>
-  <div class="overflow-x-auto flex justify-center">
-    <div style="display: inline-block">
-      <div id="cal-heatmap"></div>
-      <div class="flex items-center mt-2">
-        <button class="btn btn-sm btn-secondary" onclick="cal.previous()">
-          ← Previous
-        </button>
-        <button class="btn btn-sm btn-secondary ml-2" onclick="cal.next()">
-          Next →
-        </button>
-        <div id="cal-heatmap-legend" class="ml-auto"></div>
-      </div>
-    </div>
+  <div class="w-full mt-4 overflow-x-auto">
+    <div
+      id="echarts-heatmap"
+      style="min-width: 800px; height: 200px; margin: 0 auto"
+    ></div>
+  </div>
+
+  <!-- Selected Date Logs Container -->
+  <div
+    id="heatmap-selected-date-container"
+    class="mt-6 hidden border-t border-base-200 pt-4"
+  >
+    <h3 id="heatmap-selected-date-title" class="text-lg font-bold mb-4"></h3>
+    <div id="heatmap-selected-logs-list" class="flex flex-col gap-2"></div>
   </div>
 </div>
 
-<!-- Cal-Heatmap v4 & Dependencies -->
-<script src="https://d3js.org/d3.v7.min.js"></script>
-<script src="https://unpkg.com/cal-heatmap/dist/cal-heatmap.min.js"></script>
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/cal-heatmap/dist/cal-heatmap.css"
-/>
-<!-- Tooltip Plugin -->
-<script src="https://unpkg.com/@popperjs/core@2"></script>
-<script src="https://unpkg.com/cal-heatmap/dist/plugins/Tooltip.min.js"></script>
-<script src="https://unpkg.com/cal-heatmap/dist/plugins/Legend.min.js"></script>
+<!-- Hidden Source for Logs -->
+<div id="heatmap-logs-source" class="hidden">
+  {% for log in logs %}
+  <div
+    class="heatmap-log-entry"
+    data-date="{{ log.done_at.strftime('%Y-%m-%d') }}"
+  >
+    {{ render_log_row(log, update=False) }}
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ECharts -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 
 <script>
   (function() {
     // ログデータをJavaScriptオブジェクト配列に変換
     const rawData = [
       {% for log in logs %}
-      { date: "{{ log.done_at.isoformat() }}", value: 1, parentId: "{{ log.parent_item_id }}" },
+      { date: "{{ log.done_at.isoformat() }}", value: 1, parentId: "{{ log.parent_item_id }}", child: "{{ log.child_short_name | replace("'", "\\'") }}" },
       {% endfor %}
     ];
 
-    // 集計関数
-    function aggregateData(filterParentId) {
+    // ECharts用のデータ集計
+    function getEChartsData(filterParentId) {
       const dataMap = {};
+      const details = {}; // 日付ごとの内訳
+
       rawData.forEach(item => {
         if (!filterParentId || item.parentId === filterParentId) {
           const day = item.date.substring(0, 10);
           dataMap[day] = (dataMap[day] || 0) + item.value;
+
+          // 内訳データの作成
+          if (!details[day]) {
+            details[day] = { total: 0, breakdown: {} };
+          }
+          details[day].total += item.value;
+          const childName = item.child || '(未設定)';
+          details[day].breakdown[childName] = (details[day].breakdown[childName] || 0) + 1;
         }
       });
-      return Object.keys(dataMap).map(key => ({
-        date: key,
-        value: dataMap[key]
-      }));
+
+      // ツールチップから参照可能にする
+      window.heatmapDetails = details;
+      return Object.keys(dataMap).map(key => [key, dataMap[key]]);
     }
 
-    // 表示期間の設定（今日から365日前）
-    const now = new Date();
-    const startDate = new Date(now);
-    startDate.setDate(now.getDate() - 365);
+    // EChartsの描画
+    var myChart = null;
+    function renderECharts(parentId) {
+      // 表示期間の計算（今月末から過去1年間）
+      const today = new Date();
+      const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0); // 今月末
+      const startDate = new Date(endDate);
+      startDate.setFullYear(startDate.getFullYear() - 1);
+      startDate.setDate(startDate.getDate() + 1);
+      const range = [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]];
 
-    // Cal-Heatmapの描画
-    window.cal = null; // グローバル変数にしてボタンからアクセス可能にする
+      // 全期間のデータを0で初期化して作成
+      const chartDataMap = new Map();
+      let curr = new Date(startDate);
+      while (curr <= endDate) {
+        const y = curr.getFullYear();
+        const m = ('0' + (curr.getMonth() + 1)).slice(-2);
+        const d = ('0' + curr.getDate()).slice(-2);
+        const dateStr = `${y}-${m}-${d}`;
+        chartDataMap.set(dateStr, 0);
+        curr.setDate(curr.getDate() + 1);
+      }
 
-    function renderHeatmap(parentId) {
-      const sourceData = aggregateData(parentId);
+      // 実データを上書き
+      const actualData = getEChartsData(parentId);
+      actualData.forEach(item => {
+        chartDataMap.set(item[0], item[1]);
+      });
+      const chartData = Array.from(chartDataMap.entries());
 
-      // 既存の描画をクリア
-      document.getElementById('cal-heatmap').innerHTML = '';
-      document.getElementById('cal-heatmap-legend').innerHTML = '';
+      if (!myChart) {
+        const chartDom = document.getElementById('echarts-heatmap');
+        myChart = echarts.init(chartDom);
 
-      window.cal = new CalHeatmap();
-      const cal = window.cal;
+        // Click event handler
+        myChart.on('click', function(params) {
+          if (params.componentType === 'series') {
+            const date = params.data[0];
+            const container = document.getElementById('heatmap-selected-date-container');
+            const list = document.getElementById('heatmap-selected-logs-list');
+            const title = document.getElementById('heatmap-selected-date-title');
+            const source = document.getElementById('heatmap-logs-source');
 
-      cal.paint({
-        itemSelector: '#cal-heatmap',
-        range: 12,
-        domain: {
-          type: 'month',
+            list.innerHTML = '';
+            const entries = source.querySelectorAll(`.heatmap-log-entry[data-date="${date}"]`);
+
+            if (entries.length > 0) {
+              title.textContent = date + ' の記録';
+              entries.forEach(entry => {
+                Array.from(entry.children).forEach(child => {
+                  list.appendChild(child.cloneNode(true));
+                });
+              });
+              container.classList.remove('hidden');
+            } else {
+              container.classList.add('hidden');
+            }
+          }
+        });
+      }
+
+      const option = {
+        title: { top: 0, left: 'left', text: 'Activity', textStyle: { fontSize: 14 } },
+        tooltip: {
+          position: 'top',
+          formatter: function (p) {
+            const date = p.data[0];
+            const value = p.data[1];
+            const details = (window.heatmapDetails && window.heatmapDetails[date]) ? window.heatmapDetails[date] : null;
+            let html = '<div>' + date + ' : ' + value + ' 件</div>';
+            if (details && details.breakdown) {
+              Object.keys(details.breakdown).forEach(name => {
+                html += '<div>' + name + ': ' + details.breakdown[name] + '</div>';
+              });
+            }
+            return html;
+          }
         },
-        subDomain: {
-          type: 'day',
-          radius: 2,
+        visualMap: {
+          min: 0,
+          max: 10,
+          type: 'piecewise',
+          orient: 'horizontal',
+          left: 'right',
+          bottom: 0,
+          pieces: [
+            { min: 0, max: 0, color: '#ebedf0' },
+            { min: 1, max: 3, color: '#9be9a8' },
+            { min: 4, max: 6, color: '#40c463' },
+            { min: 7, max: 9, color: '#30a14e' },
+            { min: 10, color: '#216e39' }
+          ]
         },
-        date: { start: startDate },
-        data: {
-          source: sourceData,
-          x: 'date',
-          y: 'value'
+        calendar: {
+          top: 40,
+          left: 'center',
+          cellSize: [13, 13],
+          range: range,
+          splitLine: { show: false },
+          itemStyle: { borderWidth: 0, borderColor: '#fff' },
+          yearLabel: { show: false },
+          dayLabel: { firstDay: 1, nameMap: ['Sun', 'Mon', '', 'Wed', '', 'Fri', ''] },
+          monthLabel: { nameMap: 'en' }
         },
-        scale: {
-          color: {
-            type: 'threshold',
-            range: ['#f3f4f6', '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d'],
-            domain: [1, 2, 3, 5, 7, 10]
-          },
-        },
-        theme: 'light',
-      }, [
-        [
-          Tooltip,
-          {
-            text: (date, value, dayjsDate) => (value ? value : 0) + ' 件 (' + dayjsDate.format('YYYY-MM-DD') + ')',
-          },
-        ],
-        [
-          Legend,
-          {
-            tickSize: 0,
-            width: 150,
-            itemSelector: '#cal-heatmap-legend',
-            label: '件数',
-          },
-        ],
-      ]);
+        series: {
+          type: 'heatmap',
+          coordinateSystem: 'calendar',
+          data: chartData,
+          itemStyle: {
+            borderRadius: 3,
+            borderColor: '#fff',
+            borderWidth: 2
+          }
+        }
+      };
+      myChart.setOption(option);
     }
 
     // 初期描画
-    renderHeatmap('');
+    renderECharts('');
 
     // フィルタリング関数をグローバルに定義
     window.filterHeatmap = function(btn, parentId) {
@@ -148,7 +220,12 @@
       btn.classList.add('btn-active', 'btn-primary');
 
       // 再描画
-      renderHeatmap(parentId);
+      renderECharts(parentId);
     };
+
+    // リサイズ対応
+    window.addEventListener('resize', function() {
+      if (myChart) myChart.resize();
+    });
   })();
 </script>

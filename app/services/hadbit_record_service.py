@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -66,12 +66,15 @@ def update_hadbit_record(db: Session, user_id: str, log_id: int, record_date: da
     db.execute(query, {"done_at": record_date, "comment": memo, "log_id": log_id, "user_id": user_id})
 
 def get_logs(db: Session, user_id: str, start_date: str = None, end_date: str = None):
+    # JSTの現在時刻を取得
+    now_jst = datetime.now(timezone(timedelta(hours=9)))
+
     # 1. デフォルト期間の設定（指定がない場合は直近1年）
     if not start_date:
-        start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+        start_date = (now_jst - timedelta(days=365)).strftime('%Y-%m-%d')
     if not end_date:
         # 時刻を含まない日付比較の場合、その日の終わりまで含める工夫が必要な場合があります
-        end_date = datetime.now().strftime('%Y-%m-%d 23:59:59')
+        end_date = now_jst.strftime('%Y-%m-%d 23:59:59')
 
     # 2. SQLクエリの定義（:user_id を追加）
     sql = text("""

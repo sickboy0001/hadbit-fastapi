@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
-from ..dependencies import templates, get_current_user
-from ..database import get_db
-from ..services.post_service import get_recent_posts
-from ..services.hadbit_service import (
+from app.dependencies import templates, get_current_user
+from app.database import get_db
+from app.services.post_service import get_recent_posts
+from app.services.hadbit_service import (
     get_hadbits,
     get_parent_hadbit_items,
     get_hadbit_tree_max_sort_order,

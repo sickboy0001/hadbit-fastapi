@@ -3,12 +3,12 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 import json
-from ..dependencies import templates, get_current_user
-from ..database import get_db
-from ..services.hadbit_service import (
+from app.dependencies import templates, get_current_user
+from app.database import get_db
+from app.services.hadbit_service import (
     get_hadbits,
 )
-from ..services.hadbit_record_service import (
+from app.services.hadbit_record_service import (
     create_hadbit_record, 
     get_logs, 
     delete_hadbit_record, 

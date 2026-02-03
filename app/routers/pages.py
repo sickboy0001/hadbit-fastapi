@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
-from ..dependencies import templates, get_current_user
-from ..database import get_db
-from ..services.post_service import get_recent_posts
+from app.dependencies import templates, get_current_user
+from app.database import get_db
+from app.services.post_service import get_recent_posts
 
 router = APIRouter()
 

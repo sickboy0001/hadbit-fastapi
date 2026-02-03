@@ -3,8 +3,8 @@ from fastapi import Request, Depends
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from .services.supabase_client import supabase
-from .database import get_db
+from app.services.supabase_client import supabase
+from app.database import get_db
 
 # テンプレートの設定 (app/templates を指すように調整)
 BASE_DIR = Path(__file__).resolve().parent

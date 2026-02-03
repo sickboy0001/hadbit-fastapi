@@ -1,0 +1,6 @@
+name = "my-fastapi-app"
+main = "app/main.py"  # ここを修正
+compatibility_date = "2024-04-01"
+
+[compatibility_flags]
+python_workers = true
