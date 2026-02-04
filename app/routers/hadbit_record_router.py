@@ -1,26 +1,17 @@
-from fastapi import APIRouter, Request, Depends, Form
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi import APIRouter, Request, Depends
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta, timezone
-import json
 from app.dependencies import templates, get_current_user
 from app.database import get_db
 from app.services.hadbit_service import (
     get_hadbits,
 )
 from app.services.hadbit_record_service import (
-    create_hadbit_record, 
     get_logs, 
-    delete_hadbit_record, 
     get_log, 
-    update_hadbit_record_memo,
-    update_hadbit_record
 )
 
 router = APIRouter()
-
-def get_now_jst():
-    return datetime.now(timezone(timedelta(hours=9))).replace(tzinfo=None)
 
 @router.get("/hadbit/records", response_class=HTMLResponse)
 async def hadbit_records(request: Request, user = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -92,152 +83,5 @@ async def record_edit_view(request: Request, id: int, user = Depends(get_current
         return RedirectResponse(url="/login")
     log = get_log(db, user.id, id)
     return templates.TemplateResponse("hadbit/partials/record_edit_modal.html", {"request": request, "user": user, "log": log})
-
-
-@router.post("/api/hadbit/records/create")
-async def save_record(
-    request: Request,
-    hadbit_item_id: int = Form(...),
-    record_date: datetime = Form(default_factory=get_now_jst),
-    memo: str = Form(""),
-    user = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    if not user:
-        return JSONResponse(status_code=401, content={"message": "Unauthorized"})
-    
-    new_record = create_hadbit_record(db, user.id, hadbit_item_id, record_date, memo)
-    db.commit()
-    
-    # 全件取得してリスト全体を更新する
-    logs = get_logs(db, user.id)
-
-    # リスト全体のHTMLを生成
-    table_html = templates.get_template("hadbit/partials/records_table.html").render({"logs": logs})
-
-    response = HTMLResponse(content=table_html)
-    toast_msg = f'登録しました <span class="underline font-bold ml-2 cursor-pointer" onclick="htmx.ajax(\'GET\', \'/hadbit/records/{new_record.id}/edit\', {{target:\'#modal-container\', swap:\'innerHTML\'}})">編集</span>'
-    response.headers["HX-Trigger"] = json.dumps({"toast": toast_msg})
-    return response
-
-@router.put("/api/hadbit/records/regist/{log_id}")
-async def update_record(
-    log_id: int,
-    record_date: datetime = Form(...),
-    memo: str = Form(""),
-    user = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    if not user:
-        return JSONResponse(status_code=401, content={"message": "Unauthorized"})
-    
-    # レコードを特定して更新
-    update_hadbit_record(db, user.id, log_id, record_date, memo)
-    db.commit()
-        
-    # 全件取得してリスト全体を更新する（日付変更によるグループ移動に対応するため）
-    logs = get_logs(db, user.id)
-    
-    # リスト全体のHTML (swap_all=True で id="records-list" を OOB swap)
-    table_html = templates.get_template("hadbit/partials/records_table.html").render({"logs": logs, "swap_all": True})
-    
-    response = HTMLResponse(content=table_html)
-    response.headers["HX-Trigger"] = json.dumps({"toast": "保存しました。"})
-    return response
-
-@router.post("/api/hadbit/records/restore")
-async def restore_record(
-    hadbit_item_id: int = Form(...),
-    record_date: datetime = Form(default_factory=get_now_jst),
-    memo: str = Form(""),
-    user = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    if not user:
-        return JSONResponse(status_code=401, content={"message": "Unauthorized"})
-    
-    create_hadbit_record(db, user.id, hadbit_item_id, record_date, memo)
-    db.commit()
-    
-    return HTMLResponse(content="", status_code=200)
-
-@router.delete("/api/logs/delete/{log_id}")
-async def delete_record(
-    log_id: int,
-    user = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    if not user:
-        return JSONResponse(status_code=401, content={"message": "Unauthorized"})
-    
-    deleted_record = delete_hadbit_record(db, user.id, log_id)
-    db.commit()
-    
-    if not deleted_record:
-        return HTMLResponse(content="")
-
-    # 復元用のデータをJSON文字列として準備
-    restore_vals = json.dumps({
-        "hadbit_item_id": deleted_record.item_id,
-        "record_date": deleted_record.done_at.isoformat(),
-        "memo": deleted_record.comment or ""
-    })
-
-    # トーストのHTMLを生成
-    toast_html = templates.get_template("hadbit/partials/toast_deleted.html").render({
-        "log_id": log_id,
-        "restore_vals": restore_vals
-    })
-
-    return HTMLResponse(content=toast_html)
-
-@router.get("/api/hadbit/records/{log_id}/memo")
-async def get_memo_form(log_id: int, user = Depends(get_current_user), db: Session = Depends(get_db)):
-    if not user:
-        return JSONResponse(status_code=401, content={"message": "Unauthorized"})
-    
-    log = get_log(db, user.id, log_id)
-    if not log:
-        return HTMLResponse("Error")
-    
-    memo = log.comment or ""
-    return HTMLResponse(f"""
-        <form hx-patch="/api/hadbit/records/{log_id}/memo" hx-swap="outerHTML" class="flex items-center gap-1">
-            <input type="text" name="memo" value="{memo}" class="input input-bordered input-xs w-full max-w-xs" autofocus>
-            <button type="submit" class="btn btn-xs btn-primary">保存</button>
-            <button type="button" class="btn btn-xs" hx-get="/api/hadbit/records/{log_id}/memo/view" hx-swap="outerHTML">×</button>
-        </form>
-    """)
-
-@router.get("/api/hadbit/records/{log_id}/memo/view")
-async def get_memo_view(log_id: int, user = Depends(get_current_user), db: Session = Depends(get_db)):
-    if not user:
-        return JSONResponse(status_code=401, content={"message": "Unauthorized"})
-    
-    log = get_log(db, user.id, log_id)
-    memo = log.comment or ""
-    display_text = memo if memo else '<span class="text-gray-400 text-xs">(メモなし)</span>'
-    
-    return HTMLResponse(f"""
-        <div hx-get="/api/hadbit/records/{log_id}/memo" hx-trigger="click" hx-swap="outerHTML" class="cursor-pointer hover:bg-base-200 p-1 rounded min-h-[1.5rem] min-w-[4rem]">
-            {display_text}
-        </div>
-    """)
-
-@router.patch("/api/hadbit/records/{log_id}/memo")
-async def update_memo(log_id: int, memo: str = Form(""), user = Depends(get_current_user), db: Session = Depends(get_db)):
-    if not user:
-        return JSONResponse(status_code=401, content={"message": "Unauthorized"})
-    
-    update_hadbit_record_memo(db, user.id, log_id, memo)
-    db.commit()
-    
-    # 更新後の表示ビューを返す（get_memo_viewと同じHTML構造）
-    display_text = memo if memo else '<span class="text-gray-400 text-xs">(メモなし)</span>'
-    return HTMLResponse(f"""
-        <div hx-get="/api/hadbit/records/{log_id}/memo" hx-trigger="click" hx-swap="outerHTML" class="cursor-pointer hover:bg-base-200 p-1 rounded min-h-[1.5rem] min-w-[4rem]">
-            {display_text}
-        </div>
-    """)
 
 # d:\work\dev\fastapi\hadbit-fastapi\app\routers\hadbit_router.py

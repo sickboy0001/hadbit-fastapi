@@ -15,6 +15,7 @@ async def login_submit(request: Request, email: str = Form(...), password: str =
         res = supabase.auth.sign_in_with_password({"email": email, "password": password})
         response = RedirectResponse(url="/dashboard", status_code=303)
         response.set_cookie(key="access_token", value=res.session.access_token, httponly=True, secure=False)
+        response.set_cookie(key="refresh_token", value=res.session.refresh_token, httponly=True, secure=False)
         return response
     except Exception as e:
         return templates.TemplateResponse("login.html", {"request": request, "error": "ログインに失敗しました。メールアドレスかパスワードを確認してください。"})
@@ -63,4 +64,5 @@ async def update_password_submit(request: Request, password: str = Form(...), to
 async def logout():
     response = RedirectResponse(url="/login", status_code=303)
     response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
     return response

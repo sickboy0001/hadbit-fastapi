@@ -1,0 +1,124 @@
+{% extends "base.html" %} {% block title %}データ移行ツール | Hadbit{% endblock
+%} {% block content %}
+<div class="container mx-auto mt-5">
+  <div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+      <h2 class="card-title text-2xl mb-4">
+        <i class="fas fa-exchange-alt"></i> データ移行ツール
+      </h2>
+
+      {% if error %}
+      <div role="alert" class="alert alert-error">
+        <i class="fas fa-exclamation-circle"></i>
+        <div>
+          <h3 class="font-bold">エラーが発生しました</h3>
+          <div class="text-sm">{{ error }}</div>
+        </div>
+      </div>
+      <div class="mt-4">
+        <a href="/convert" class="btn btn-secondary">戻る</a>
+      </div>
+
+      {% elif step == 'preview' %}
+      <h3 class="text-xl font-bold">Step 1: 移行データのプレビュー</h3>
+      <p>以下の内容でデータ移行を行います。内容を確認してください。</p>
+
+      <div role="alert" class="alert alert-info my-4">
+        <i class="fas fa-info-circle"></i>
+        <div>
+          <div><strong>対象ユーザー:</strong> {{ data.target_email }}</div>
+          <div><strong>旧ユーザーID:</strong> {{ data.old_user_id }}</div>
+          <div><strong>新ユーザーUUID:</strong> {{ data.new_user_uuid }}</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Old Data -->
+        <div class="card bg-base-200 border border-base-300">
+          <div class="card-body p-4">
+            <h4 class="card-title text-lg">移行元データ (Old)</h4>
+            <ul class="list-disc list-inside">
+              <li>
+                習慣アイテム数:
+                <strong>{{ data.old_data.items_count }}</strong> 件
+              </li>
+              <li>
+                ログ記録数:
+                <strong>{{ data.old_data.logs_count }}</strong> 件
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- New Data -->
+        <div class="card bg-base-100 border border-error">
+          <div class="card-body p-4">
+            <h4 class="card-title text-lg text-error">削除対象データ (New)</h4>
+            <p class="text-error text-sm">
+              ※ 移行を実行すると、現在の以下のデータは削除されます。
+            </p>
+            <ul class="list-disc list-inside">
+              <li>
+                現在のアイテム数:
+                <strong>{{ data.new_data.items_count }}</strong> 件
+              </li>
+              <li>
+                現在のログ数:
+                <strong>{{ data.new_data.logs_count }}</strong> 件
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-actions justify-end mt-4">
+        <form action="/convert/confirm" method="post">
+          <button type="submit" class="btn btn-primary">
+            確認画面へ進む <i class="fas fa-arrow-right"></i>
+          </button>
+        </form>
+      </div>
+
+      {% elif step == 'confirm' %}
+      <h3 class="text-xl font-bold text-error">Step 2: 最終確認</h3>
+      <p>本当に実行してよろしいですか？この操作は取り消せません。</p>
+
+      <div role="alert" class="alert alert-warning my-4">
+        <i class="fas fa-exclamation-triangle"></i>
+        <div>
+          現在のデータ（{{ data.new_data.items_count }}件のアイテム、{{
+          data.new_data.logs_count }}件のログ）は全て削除され、 旧システム（{{
+          data.old_data.items_count }}件のアイテム、{{ data.old_data.logs_count
+          }}件のログ）のデータで上書きされます。
+        </div>
+      </div>
+
+      <div class="flex justify-between mt-4">
+        <a href="/convert" class="btn btn-secondary">キャンセル</a>
+        <form action="/convert/execute" method="post">
+          <button type="submit" class="btn btn-error btn-lg">実行する</button>
+        </form>
+      </div>
+
+      {% elif step == 'result' %}
+      <h3 class="text-xl font-bold text-success">Step 3: 完了</h3>
+      <div role="alert" class="alert alert-success my-4">
+        <i class="fas fa-check-circle"></i>
+        <span>データ移行が正常に完了しました。</span>
+      </div>
+
+      <ul class="list-disc list-inside mb-4">
+        <li>
+          移行されたアイテム数: <strong>{{ result.items_count }}</strong> 件
+        </li>
+        <li>移行されたログ数: <strong>{{ result.logs_count }}</strong> 件</li>
+      </ul>
+
+      <div class="card-actions justify-end">
+        <a href="/dashboard" class="btn btn-primary">ダッシュボードへ</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

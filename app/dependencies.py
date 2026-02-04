@@ -25,13 +25,38 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
     Cookieからアクセストークンを取得し、Supabaseでユーザー情報を取得する。
     認証失敗時は None を返す。
     """
-    token = request.cookies.get("access_token")
-    if not token:
+    access_token = request.cookies.get("access_token")
+    refresh_token = request.cookies.get("refresh_token")
+
+    if not access_token and not refresh_token:
         return None
     
+    user = None
+
+    # 1. Access Token でユーザー取得を試みる
+    if access_token:
+        try:
+            user_response = supabase.auth.get_user(access_token)
+            user = user_response.user
+        except Exception:
+            pass
+
+    # 2. 失敗した場合、Refresh Token でセッション更新を試みる
+    if not user and refresh_token:
+        try:
+            res = supabase.auth.refresh_session(refresh_token)
+            if res.session:
+                user = res.session.user
+                # 新しいトークンをCookieにセットするためにstateに保存 (Middlewareで処理)
+                request.state.new_access_token = res.session.access_token
+                request.state.new_refresh_token = res.session.refresh_token
+        except Exception as e:
+            print(f"Token refresh failed: {e}")
+
+    if not user:
+        return None
+
     try:
-        user_response = supabase.auth.get_user(token)
-        user = user_response.user
         if user and user.email:
             # mail_to_id テーブルから ID を取得して user オブジェクトに付与
             # SupabaseのUUIDと区別するため db_id としています
