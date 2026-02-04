@@ -1,0 +1,6 @@
+{
+  "name": "hadbit-fastapi",
+  "main": "app/main.py", // FastAPI の app = FastAPI() があるファイル
+  "compatibility_date": "2024-04-03",
+  "compatibility_flags": ["python_workers"]
+}
