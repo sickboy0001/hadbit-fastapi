@@ -1,15 +1,8 @@
 fastapi
-uvicorn
-sqlalchemy
+pydantic
+jinja2
 python-dotenv
 supabase
-jinja2
-python-multipart
-passlib
-email-validator
-sentry-sdk
 httpx
 pyyaml
-watchfiles
-python-jose
 pydantic
