@@ -23,7 +23,8 @@ RUN pip install --upgrade pip && \
 COPY . .
 
 # 6. Renderの仕様（デフォルトポート10000）に合わせる
-EXPOSE 10000
+# EXPOSE 10000
 
 # 7. 実行コマンド
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "10000"]
+# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "10000"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
