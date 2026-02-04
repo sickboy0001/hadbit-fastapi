@@ -1,12 +1,10 @@
 fastapi
 uvicorn
 sqlalchemy
-psycopg2-binary
 python-dotenv
 supabase
 jinja2
 python-multipart
-bcrypt
 passlib
 email-validator
 sentry-sdk
