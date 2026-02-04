@@ -1,4 +1,4 @@
 name = "hadbit-fastapi"
 main = "app/main.py"
-compatibility_date = "2024-04-01"
+compatibility_date = "2024-12-30"
 compatibility_flags = ["python_workers"]
