@@ -1,3 +1,13 @@
+import os
+import sys
+from pathlib import Path
+
+# 自分の親ディレクトリを sys.path に追加する
+# これにより "from app.xxx" が Workers 上でも動くようになります
+base_path = Path(__file__).resolve().parent.parent
+if str(base_path) not in sys.path:
+    sys.path.insert(0, str(base_path))
+    
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles

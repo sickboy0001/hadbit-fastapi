@@ -1,6 +1,15 @@
 {
   "name": "hadbit-fastapi",
-  "main": "app/main.py", // FastAPI の app = FastAPI() があるファイル
+  "main": "app/main.py",
   "compatibility_date": "2024-04-03",
-  "compatibility_flags": ["python_workers"]
+  "compatibility_flags": [
+    "python_workers"
+  ],
+  "base_dir": ".",  // ← これを追加してください！
+  "vars": {
+    "DATABASE_URL": "...",
+    "SECRET_KEY": "...",
+    "SUPABASE_URL": "...",
+    "SUPABASE_KEY": "..."
+  }
 }
