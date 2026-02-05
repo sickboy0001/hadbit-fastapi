@@ -28,7 +28,6 @@
     - [構成のポイント](#構成のポイント)
   - [DDL](#ddl)
 - [クエリ頑張る系](#クエリ頑張る系)
-    - [コンバートクエリ](#コンバートクエリ)
 - [履歴](#履歴)
 
 
@@ -119,6 +118,7 @@ Renderを利用したCI/CDが自動化されています。
 4. **環境変数管理**: Render Dashboardおよびローカルの `.env` で秘匿情報を管理。
 
 - [デプロイ先-Render-hadbit](https://hadbit-fastapi.onrender.com/dashboard)
+- [デプロイ先-Koyeb-hadbit](https://hadbit-fastapi.koyeb.app/dashboard)
 ---
 
 Dockerでの起動方法
@@ -367,90 +367,13 @@ ORDER BY
   child_sort_order;
 
 ```
-### コンバートクエリ
-```sql 
-DO $$
-DECLARE
-    -- ★ ここに対象ユーザーのメールアドレスを指定してください ★
-    target_email text := 'syunjyu0001@gmail.com';
-    
-    old_user_id int;
-    new_user_uuid uuid;
-BEGIN
-    -- 1. ユーザーIDの紐付け取得
-    SELECT m.id, u.id INTO old_user_id, new_user_uuid
-    FROM public.mail_to_id m
-    JOIN auth.users u ON m.mail = u.email
-    WHERE m.mail = target_email;
-
-    IF old_user_id IS NULL OR new_user_uuid IS NULL THEN
-        RAISE EXCEPTION 'ユーザーが見つかりません: %', target_email;
-    END IF;
-
-    -- 2. 新テーブルから対象ユーザーの既存データを削除 (外部キー CASCADE により tree も削除される)
-    DELETE FROM public.hadbit_logs WHERE user_id = new_user_uuid;
-    DELETE FROM public.hadbit_items WHERE user_id = new_user_uuid;
-
-    -- 3. hadbit_items への移行
-    -- id は指定せず PostgreSQL のシリアル採番に任せる
-    INSERT INTO public.hadbit_items (
-        user_id, name, short_name, description, 
-        parent_flag, public_flag, visible_flag, delete_flag, 
-        updated_at, created_at, item_style, is_deleted
-    )
-    SELECT 
-        new_user_uuid, name, short_name, description, 
-        parent_flag, public_flag, visible_flag, delete_flag, 
-        updated_at, created_at, item_style, delete_flag
-    FROM public.habit_items
-    WHERE user_id = old_user_id
-    ORDER BY id ASC; -- IDの順序を維持して採番させるため
-
-    -- 4. hadbit_trees への移行
-    -- item_id の紐付けが必要なため、名前等でマッチングして新旧IDを結合
-    INSERT INTO public.hadbit_trees (item_id, user_id, parent_id, order_no)
-    SELECT 
-        new_item.id,
-        new_user_uuid,
-        parent_item.id, -- 新しい親IDをセット
-        tree.order_no
-    FROM public.habit_item_tree tree
-    JOIN public.habit_items old_item ON tree.item_id = old_item.id
-    JOIN public.hadbit_items new_item ON new_item.name = old_item.name AND new_item.user_id = new_user_uuid
-    LEFT JOIN public.habit_items old_parent ON tree.parent_id = old_parent.id
-    LEFT JOIN public.hadbit_items parent_item ON parent_item.name = old_parent.name AND parent_item.user_id = new_user_uuid
-    WHERE old_item.user_id = old_user_id;
-
-    -- 5. hadbit_logs への移行
-    INSERT INTO public.hadbit_logs (
-        user_id, item_id, done_at, updated_at, created_at, comment
-    )
-    SELECT 
-        new_user_uuid,
-        new_item.id,
-        logs.done_at,
-        logs.updated_at,
-        logs.created_at,
-        logs.comment
-    FROM public.habit_logs logs
-    JOIN public.habit_items old_item ON logs.item_id = old_item.id
-    JOIN public.hadbit_items new_item ON new_item.name = old_item.name AND new_item.user_id = new_user_uuid
-    WHERE logs.user_id = old_user_id;
-
-    RAISE NOTICE 'コンバート完了: %', target_email;
-END $$;
-
---parent_idがnullになったときに0に戻す
---update hadbit_trees
---set parent_id = 0
---  where user_id = '76b8d0ed-825d-43a6-a725-37e10c11015b'
---  and parent_id is null
-
-```
 # 履歴
+- 2026/2/6
+  - Koyeb検討→月５００円程度かと（Nano・東京リージョン利用）、６日間体験中、
+    - [Koyeb](https://app.koyeb.com/)
+    - [Deploy](https://hadbit-fastapi.koyeb.app/dashboard)
 - 2026/2/5
   - Dockerベースと、Uvicornスラいらない環境両立は難しいという結論、cloudflareひとまず諦め
-  - Koyeb検討
 - 2026/2/4
   - Cloudflareアップ調整。
   - てこずる・・・再度アップ   
